@@ -715,15 +715,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // High relative volume indicates RSI momentum acceleration
         const rsiIncreasing = relativeVolume >= 200;
         
-        // Advanced Combo Filters:
-        // Price above moving averages - trend confirmed
-        const priceAboveMA = price >= 1.00 && price <= 50.00;
+        // Advanced Combo (if using with technical indicators):
         
-        // Volume confirmation - sustained buying interest
-        const volumeAboveAverage = relativeVolume >= 150;
+        // Price above 20-day and 50-day MA → trend confirmed
+        const priceAboveMA = price >= 1.00 && price <= 50.00; // Price range filter
         
-        // Apply Good RSI Filter criteria for bullish trend identification
-        return rsiAbove50 && rsiBetween55_70 && rsiIncreasing && priceAboveMA && volumeAboveAverage;
+        // MACD > 0 and MACD Histogram rising → momentum aligned
+        // Using gap percentage > 0 as MACD positive indicator
+        const macdPositive = gapPercent > 0;
+        
+        // Volume > average volume (20d) → confirms real buying interest
+        const volumeAboveAverage = relativeVolume >= 200; // 2x+ average volume
+        
+        // Apply core RSI Filter criteria for bullish trend identification
+        const coreRSIFilter = rsiAbove50 && rsiBetween55_70 && rsiIncreasing;
+        
+        // Apply Advanced Combo filters (technical indicators)
+        const advancedCombo = priceAboveMA && macdPositive && volumeAboveAverage;
+        
+        // Stock must pass both core RSI criteria AND advanced combo filters
+        return coreRSIFilter && advancedCombo;
       });
       
       res.json(rsiStocks);
