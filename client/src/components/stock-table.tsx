@@ -189,7 +189,15 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                 </td>
                 <td className="px-4 py-2 whitespace-nowrap">
                   <div className="flex items-center space-x-1">
-                    <span className="font-bold text-black text-sm">{stock.symbol}</span>
+                    <a 
+                      href={`https://www.tradingview.com/chart/?symbol=${stock.symbol}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-sm transition-colors"
+                      title={`View ${stock.symbol} chart on TradingView`}
+                    >
+                      {stock.symbol}
+                    </a>
                     {(stock.hasNews || stock.newsCount) && (
                       <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-red-500"></div>
                     )}
