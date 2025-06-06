@@ -643,6 +643,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all news from all stocks
+  app.get("/api/news/all", async (req, res) => {
+    try {
+      const stocks = await storage.getAllStocks();
+      const allNews = [];
+      
+      for (const stock of stocks.slice(0, 20)) { // Limit to top 20 stocks to avoid performance issues
+        const stockNews = await storage.getStockNews(stock.symbol);
+        allNews.push(...stockNews);
+      }
+      
+      // Sort by publication date (newest first)
+      allNews.sort((a, b) => {
+        const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+        const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+        return dateB - dateA;
+      });
+      
+      // Return latest 100 news items
+      res.json(allNews.slice(0, 100));
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch all news" });
+    }
+  });
+
   // Refresh stock data
   app.post("/api/stocks/refresh", async (req, res) => {
     try {

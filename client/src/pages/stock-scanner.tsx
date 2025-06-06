@@ -3,10 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import StockTable from "@/components/stock-table";
 import NewsModal from "@/components/news-modal";
+import NewsRoom from "@/pages/news-room";
 import ControlsSection from "@/components/controls-section";
 import ReportsSidebar from "@/components/reports-sidebar";
 import { useWebSocket } from "@/lib/websocket";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, Newspaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface MarketStatus {
@@ -39,6 +40,7 @@ export default function StockScanner() {
   const [currentReport, setCurrentReport] = useState<string>("moys-top-gappers");
   const [currentEndpoint, setCurrentEndpoint] = useState<string>("/api/stocks/gappers?filter=moys");
   const [currentReportName, setCurrentReportName] = useState<string>("Moys Top Gappers");
+  const [isNewsRoomOpen, setIsNewsRoomOpen] = useState(false);
 
   const [stocks, setStocks] = useState<StockGapper[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -264,6 +266,14 @@ export default function StockScanner() {
                   High Priority: {highPriorityStocks} stocks
                 </div>
               </div>
+              <Button 
+                onClick={() => setIsNewsRoomOpen(true)}
+                className="bg-green-600 hover:bg-green-700 text-white"
+                size="sm"
+              >
+                <Newspaper className="w-4 h-4 mr-2" />
+                News Room
+              </Button>
               <Button 
                 onClick={handleRefresh}
                 disabled={isLoading}
