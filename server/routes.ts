@@ -10,7 +10,7 @@ const POLYGON_BASE_URL = "https://api.polygon.io";
 const POLYGON_WS_URL = "wss://socket.polygon.io/stocks";
 
 // Store minute-level volume data for 5-minute relative volume calculations
-const minuteVolumeData = new Map();
+const minuteVolumeData = new Map<string, Array<any>>();
 
 interface PolygonTicker {
   T: string;    // ticker
