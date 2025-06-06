@@ -129,8 +129,8 @@ export default function NewsRoom({ isOpen, onClose }: NewsRoomProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-6xl h-[90vh] p-0">
-        <DialogHeader className="p-6 pb-0">
+      <DialogContent className="max-w-6xl h-[90vh] p-0 flex flex-col">
+        <DialogHeader className="p-6 pb-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2 text-2xl">
               <Bell className="w-6 h-6" />
@@ -172,9 +172,9 @@ export default function NewsRoom({ isOpen, onClose }: NewsRoomProps) {
           </div>
         </DialogHeader>
 
-        <div className="flex-1 px-6 pb-6">
+        <div className="flex-1 px-6 pb-6 overflow-hidden">
           <ScrollArea className="h-full">
-            <div className="space-y-3">
+            <div className="space-y-3 pr-4">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-muted-foreground">Loading news...</div>
