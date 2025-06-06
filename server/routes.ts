@@ -502,32 +502,24 @@ async function fetchTopGappers(): Promise<void> {
     
     if (shouldFetchFloat) {
       try {
-        // Fetch comprehensive data for all stocks
+        // Fetch float data for all stocks to ensure complete coverage
         const symbols = sortedGappers.map(stock => stock.symbol);
         console.log(`Fetching float data for ${symbols.length} stocks...`);
         const floatData = await fetchFloatData(symbols);
         
-        // Fetch short interest data for top stocks
-        const topSymbols = symbols.slice(0, 10); // Limit to top 10 for API efficiency
-        console.log(`Fetching short interest data for ${topSymbols.length} top stocks...`);
-        const shortData = await fetchShortData(topSymbols);
-        
-        // Update stocks with comprehensive data
+        // Update stocks with float data
         const updatedGappers = sortedGappers.map(stock => ({
           ...stock,
-          float: floatData[stock.symbol] || stock.float || null,
-          shortInterest: shortData[stock.symbol]?.shortInterest || stock.shortInterest || null,
-          shortRatio: shortData[stock.symbol]?.shortRatio || stock.shortRatio || null
+          float: floatData[stock.symbol] || stock.float || null // Keep existing float if fetch fails
         }));
         
-        // Save updated stocks
+        // Save updated stocks with float data
         for (const stock of updatedGappers) {
           await storage.upsertStock(stock);
         }
         
         const validFloats = Object.values(floatData).filter(f => f !== null).length;
-        const validShorts = Object.values(shortData).filter(d => d.shortInterest !== null || d.shortRatio !== null).length;
-        console.log(`Enhanced ${validFloats} stocks with float data and ${validShorts} stocks with short interest data`);
+        console.log(`Enhanced ${validFloats} stocks with Yahoo Finance float data`);
         return updatedGappers;
       } catch (error) {
         console.error('Error fetching float data:', error);
