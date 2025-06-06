@@ -28,8 +28,15 @@ export default function ReportsSidebar({ onReportSelect, currentReport }: Report
 
   const reportCategories: ReportCategory[] = [
     {
-      title: "Small Cap - High of Day Momentum",
+      title: "Small Cap Reports",
       reports: [
+        {
+          id: "small-cap-high-momentum",
+          name: "Small Cap - High of Day Momentum",
+          description: "Small cap stocks with high momentum",
+          endpoint: "/api/reports/small-cap-momentum",
+          icon: TrendingUp
+        },
         {
           id: "ross-top-gappers",
           name: "Ross's Top Gappers",
@@ -104,8 +111,15 @@ export default function ReportsSidebar({ onReportSelect, currentReport }: Report
       ]
     },
     {
-      title: "Large Cap - High Of Day Momentum",
+      title: "Large Cap Reports",
       reports: [
+        {
+          id: "large-cap-high-momentum",
+          name: "Large Cap - High Of Day Momentum",
+          description: "Large cap stocks with high momentum",
+          endpoint: "/api/reports/large-cap-momentum",
+          icon: TrendingUp
+        },
         {
           id: "large-cap-gappers",
           name: "Large Cap - Top Gappers",

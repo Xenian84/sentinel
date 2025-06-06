@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import StockTable from "@/components/stock-table";
 import NewsModal from "@/components/news-modal";
 import ControlsSection from "@/components/controls-section";
+import ReportsSidebar from "@/components/reports-sidebar";
 import { useWebSocket } from "@/lib/websocket";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,8 @@ export default function StockScanner() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(10);
   const [lastUpdate, setLastUpdate] = useState<string>("");
+  const [currentReport, setCurrentReport] = useState<string>("top-gappers");
+  const [currentEndpoint, setCurrentEndpoint] = useState<string>("/api/stocks/gappers");
 
   const [stocks, setStocks] = useState<StockGapper[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,6 +97,24 @@ export default function StockScanner() {
 
   const handleShowNews = (symbol: string) => {
     setSelectedStock(symbol);
+  };
+
+  const handleReportSelect = (reportId: string, endpoint: string) => {
+    setCurrentReport(reportId);
+    setCurrentEndpoint(endpoint);
+    setIsLoading(true);
+    
+    // Fetch new report data
+    fetch(endpoint)
+      .then(res => res.json())
+      .then(data => {
+        setStocks(data);
+        setIsLoading(false);
+      })
+      .catch(error => {
+        console.error("Failed to load report data:", error);
+        setIsLoading(false);
+      });
   };
 
   const positiveGappers = stocks.filter(stock => 
@@ -212,9 +233,16 @@ export default function StockScanner() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6">
-        {/* Main Scanner Section */}
-        <Card className="bg-white rounded-lg shadow-lg overflow-hidden">
+      <div className="flex">
+        {/* Reports Sidebar */}
+        <ReportsSidebar 
+          onReportSelect={handleReportSelect}
+          currentReport={currentReport}
+        />
+        
+        <div className="flex-1 p-6">
+          {/* Main Scanner Section */}
+          <Card className="bg-white rounded-lg shadow-lg overflow-hidden">
           {/* Scanner Header */}
           <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
@@ -264,6 +292,7 @@ export default function StockScanner() {
           negativeGappers={negativeGappers}
           lastUpdate={lastUpdate}
         />
+        </div>
       </div>
 
       {/* News Modal */}
