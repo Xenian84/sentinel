@@ -151,14 +151,35 @@ async function fetchTopGappers(): Promise<void> {
             console.log(`Could not fetch news for ${ticker}: ${newsError instanceof Error ? newsError.message : 'Unknown error'}`);
           }
           
-          // Calculate estimated minute-level relative volume based on daily data
+          // Calculate 5-minute relative volume using real intraday data
           let minuteRelativeVolume = null;
-          if (day && prevDay && prevDay.v > 0) {
-            // Estimate current minute volume as percentage of daily average
-            const estimatedMinuteVolume = volume / (6.5 * 60); // Assume 6.5 hour trading day
-            const avgDailyMinuteVolume = prevDay.v / (6.5 * 60);
-            if (avgDailyMinuteVolume > 0) {
-              minuteRelativeVolume = ((estimatedMinuteVolume / avgDailyMinuteVolume) * 100).toFixed(0);
+          try {
+            const now = new Date();
+            const today = now.toISOString().split('T')[0];
+            
+            // Get last 10 minutes of 1-minute bars to calculate 5-minute average
+            const minuteData = await fetchFromPolygon(`/v2/aggs/ticker/${ticker}/range/1/minute/${today}/${today}?adjusted=true&sort=desc&limit=10`);
+            
+            if (minuteData.status === "OK" && minuteData.results && minuteData.results.length >= 5) {
+              // Get current 5-minute period volume
+              const last5MinutesVolume = minuteData.results.slice(0, 5).reduce((sum: number, bar: any) => sum + bar.v, 0);
+              
+              // Get previous 5-minute period for comparison
+              const previous5MinutesVolume = minuteData.results.slice(5, 10).reduce((sum: number, bar: any) => sum + bar.v, 0);
+              
+              if (previous5MinutesVolume > 0) {
+                minuteRelativeVolume = ((last5MinutesVolume / previous5MinutesVolume) * 100).toFixed(0);
+                console.log(`${ticker} - Last 5min: ${last5MinutesVolume}, Previous 5min: ${previous5MinutesVolume}, Relative: ${minuteRelativeVolume}%`);
+              }
+            }
+          } catch (error) {
+            // If minute data fetch fails, calculate estimated relative volume
+            if (day && prevDay && prevDay.v > 0) {
+              const estimatedMinuteVolume = volume / (6.5 * 60);
+              const avgDailyMinuteVolume = prevDay.v / (6.5 * 60);
+              if (avgDailyMinuteVolume > 0) {
+                minuteRelativeVolume = ((estimatedMinuteVolume / avgDailyMinuteVolume) * 100).toFixed(0);
+              }
             }
           }
 
