@@ -24,10 +24,10 @@ def get_float_data(ticker: str) -> Optional[float]:
         session = requests.Session()
         session.headers.update(headers)
         
-        # Try multiple Yahoo Finance URLs
+        # Try multiple Yahoo Finance URLs in order of preference
         urls_to_try = [
-            f'https://finance.yahoo.com/quote/{ticker}/key-statistics',
             f'https://finance.yahoo.com/quote/{ticker}',
+            f'https://finance.yahoo.com/quote/{ticker}/key-statistics',
             f'https://finance.yahoo.com/quote/{ticker}/statistics'
         ]
         
@@ -114,12 +114,18 @@ def get_float_data(ticker: str) -> Optional[float]:
             except ValueError:
                 pass
 
-        # Method 3: Search for float in Share Statistics section with proper conversion
+        # Method 3: Enhanced pattern matching for float data
         float_patterns = [
-            r'Float[^>]*?(?:class="[^"]*"[^>]*>)*\s*([0-9,]+\.?[0-9]*)\s*([MBK]?)',
-            r'"floatShares"[^}]*"fmt":"([^"]*)"',
+            # Look for Float followed by value in various formats
+            r'Float["\s]*[^>]*?>([^<]*?([0-9,]+\.?[0-9]*)\s*([MBK]))',
             r'Float.*?([0-9,]+\.?[0-9]*)\s*([MBK])',
-            r'Shares Outstanding.*?([0-9,]+\.?[0-9]*)\s*([MBK])'
+            r'"floatShares"[^}]*?"fmt":"([^"]*)"',
+            r'"floatShares"[^}]*?"raw":([0-9.]+)',
+            # Look in table data
+            r'>Float<.*?<td[^>]*>([^<]*?([0-9,]+\.?[0-9]*)\s*([MBK]))',
+            # Generic patterns for share statistics
+            r'Shares Outstanding.*?([0-9,]+\.?[0-9]*)\s*([MBK])',
+            r'Outstanding.*?([0-9,]+\.?[0-9]*)\s*([MBK])'
         ]
         
         for pattern in float_patterns:

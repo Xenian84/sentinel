@@ -113,7 +113,7 @@ async function fetchFloatData(tickers: string[]): Promise<Record<string, number 
       return;
     }
 
-    const pythonProcess = spawn('python3', ['server/float_scraper.py', ...tickers]);
+    const pythonProcess = spawn('python3', ['server/float_scraper_simple.py', ...tickers]);
     
     let stdout = '';
     let stderr = '';
