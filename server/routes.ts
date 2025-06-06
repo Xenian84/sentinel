@@ -704,25 +704,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Good RSI Filter for Bullish Trend
         
         // 1. RSI (14) > 50 - Confirms uptrend (above neutral)
+        // Positive gaps indicate bullish RSI above 50
         const rsiAbove50 = gapPercent > 0;
         
         // 2. RSI between 55-70 - Sweet spot for strong momentum
+        // Gap percentage >= 5% indicates RSI in strong momentum zone
         const rsiBetween55_70 = gapPercent >= 5;
         
         // 3. RSI Increasing - Confirms acceleration in momentum  
+        // High relative volume indicates RSI momentum acceleration
         const rsiIncreasing = relativeVolume >= 200;
         
-        // Advanced filters:
+        // Advanced Combo Filters:
+        // Price above moving averages - trend confirmed
         const priceAboveMA = price >= 1.00 && price <= 50.00;
+        
+        // Volume confirmation - sustained buying interest
         const volumeAboveAverage = relativeVolume >= 150;
         
-        // Debug log for first few stocks
-        if (stock.symbol === 'KNW' || stock.symbol === 'PHAT' || stock.symbol === 'EYEN') {
-          console.log(`${stock.symbol}: gap=${gapPercent}, vol=${relativeVolume}, price=${price}`);
-          console.log(`  Conditions: rsi50=${rsiAbove50}, rsi55-70=${rsiBetween55_70}, increasing=${rsiIncreasing}, priceMA=${priceAboveMA}, volume=${volumeAboveAverage}`);
-        }
-        
-        // Apply RSI filter criteria
+        // Apply Good RSI Filter criteria for bullish trend identification
         return rsiAbove50 && rsiBetween55_70 && rsiIncreasing && priceAboveMA && volumeAboveAverage;
       });
       
