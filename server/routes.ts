@@ -386,7 +386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const criterion4 = price >= 1.00 && price <= 20.00; // Exact price range
             
             // 5) Supply: Less than 10 million shares available to trade (using real float data)
-            const floatShares = stock.float ? stock.float * 1000000 : null; // Convert from millions to actual shares
+            const floatShares = stock.float ? stock.float * 1000000 : null; // Yahoo Finance returns in millions, convert to actual shares
             const criterion5 = floatShares ? floatShares < 10000000 : volume < 10000000; // Use real float if available, fallback to volume
             
             // Show stocks that meet at least 3 of 5 strict criteria (compromise for market reality)

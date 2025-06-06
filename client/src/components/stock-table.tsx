@@ -97,13 +97,19 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
   };
 
   const formatFloat = (floatValue: number | null): string => {
-    if (!floatValue) return '-';
-    if (floatValue >= 1000000) {
-      return `${(floatValue / 1000000).toFixed(2)}M`;
-    } else if (floatValue >= 1000) {
-      return `${(floatValue / 1000).toFixed(2)}K`;
+    if (!floatValue || floatValue === 0) return '-';
+    
+    // Yahoo Finance returns float in millions, so convert to display format
+    const floatInMillions = floatValue;
+    
+    if (floatInMillions >= 1000) {
+      return `${(floatInMillions / 1000).toFixed(1)}B`;
+    } else if (floatInMillions >= 1) {
+      return `${floatInMillions.toFixed(1)}M`;
+    } else if (floatInMillions >= 0.001) {
+      return `${(floatInMillions * 1000).toFixed(1)}K`;
     }
-    return floatValue.toLocaleString();
+    return floatInMillions.toFixed(3);
   };
 
   const SortHeader = ({ column, children }: { column: SortColumn; children: React.ReactNode }) => (
