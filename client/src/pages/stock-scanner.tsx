@@ -35,10 +35,8 @@ export default function StockScanner() {
   const [refreshInterval, setRefreshInterval] = useState(10);
   const [lastUpdate, setLastUpdate] = useState<string>("");
 
-  const { data: stocks = [], isLoading, refetch } = useQuery<StockGapper[]>({
-    queryKey: ["/api/stocks/gappers", filter],
-    refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
-  });
+  const [stocks, setStocks] = useState<StockGapper[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const { data: marketStatus } = useQuery<MarketStatus>({
     queryKey: ["/api/market/status"],
@@ -59,19 +57,38 @@ export default function StockScanner() {
     }));
   }, [stocks]);
 
-  // Handle WebSocket updates
+  // Handle WebSocket updates for real-time data
   useEffect(() => {
     if (lastMessage?.type === 'stocks_update') {
-      refetch();
+      setStocks(lastMessage.data || []);
+      setIsLoading(false);
     }
-  }, [lastMessage, refetch]);
+  }, [lastMessage]);
+
+  // Load initial data when connected
+  useEffect(() => {
+    if (isConnected && stocks.length === 0) {
+      fetch("/api/stocks/gappers")
+        .then(res => res.json())
+        .then(data => {
+          setStocks(data);
+          setIsLoading(false);
+        })
+        .catch(error => {
+          console.error("Failed to load initial data:", error);
+          setIsLoading(false);
+        });
+    }
+  }, [isConnected]);
 
   const handleRefresh = async () => {
     try {
+      setIsLoading(true);
       await fetch("/api/stocks/refresh", { method: "POST" });
-      refetch();
+      // Data will be updated via WebSocket automatically
     } catch (error) {
       console.error("Failed to refresh data:", error);
+      setIsLoading(false);
     }
   };
 
