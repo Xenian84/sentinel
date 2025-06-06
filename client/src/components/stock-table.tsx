@@ -89,11 +89,21 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
   const formatVolume = (volume: number | null): string => {
     if (!volume) return '-';
     if (volume >= 1000000) {
-      return `${(volume / 1000000).toFixed(2)}M`;
+      return `${(volume / 1000000).toFixed(volume >= 100000000 ? 0 : 2)}M`;
     } else if (volume >= 1000) {
-      return `${(volume / 1000).toFixed(2)}K`;
+      return `${(volume / 1000).toFixed(volume >= 100000 ? 0 : 2)}K`;
     }
     return volume.toString();
+  };
+
+  const formatFloat = (floatValue: number | null): string => {
+    if (!floatValue) return '-';
+    if (floatValue >= 1000000) {
+      return `${(floatValue / 1000000).toFixed(2)}M`;
+    } else if (floatValue >= 1000) {
+      return `${(floatValue / 1000).toFixed(2)}K`;
+    }
+    return floatValue.toLocaleString();
   };
 
   const SortHeader = ({ column, children }: { column: SortColumn; children: React.ReactNode }) => (
@@ -153,51 +163,54 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
           {sortedStocks.map((stock) => {
             const gapPercent = parseFloat(stock.gapPercentage || '0');
             const isPositive = gapPercent > 0;
-            const borderColor = isPositive ? 'border-financial-success' : 'border-financial-error';
-            const gapBadgeColor = isPositive ? 'bg-financial-success' : 'bg-financial-error';
+            
+            // Color-coded background like in the reference image
+            const getRowBgColor = (gap: number) => {
+              if (gap > 100) return 'bg-green-400';
+              if (gap > 50) return 'bg-green-300';
+              if (gap > 20) return 'bg-green-200';
+              if (gap > 0) return 'bg-green-100';
+              if (gap < -20) return 'bg-red-200';
+              if (gap < -10) return 'bg-red-100';
+              return 'bg-gray-50';
+            };
+
+            const rowBgColor = getRowBgColor(gapPercent);
 
             return (
               <tr 
                 key={stock.id} 
-                className={`hover:bg-gray-50 transition-colors border-l-4 ${borderColor}`}
+                className={`hover:opacity-80 transition-opacity ${rowBgColor}`}
               >
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white ${gapBadgeColor}`}>
-                    {gapPercent > 0 ? '+' : ''}{gapPercent.toFixed(2)}%
+                <td className="px-4 py-2 whitespace-nowrap text-center">
+                  <span className="font-bold text-black text-sm">
+                    {gapPercent.toFixed(2)}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-semibold text-gray-900">{stock.symbol}</span>
+                <td className="px-4 py-2 whitespace-nowrap">
+                  <div className="flex items-center space-x-1">
+                    <span className="font-bold text-black text-sm">{stock.symbol}</span>
                     {(stock.hasNews || stock.newsCount) && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                        onClick={() => onShowNews(stock.symbol)}
-                        title="View News"
-                      >
-                        <AlertTriangle className="w-4 h-4" />
-                      </Button>
+                      <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-red-500"></div>
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap font-mono text-gray-900">
+                <td className="px-4 py-2 whitespace-nowrap text-center font-mono text-black text-sm">
                   {stock.price ? parseFloat(stock.price).toFixed(2) : '-'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap font-mono text-gray-900">
+                <td className="px-4 py-2 whitespace-nowrap text-center font-mono text-black text-sm">
                   {formatVolume(stock.volume)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap font-mono">
-                  <span className="text-cyan-600 font-medium">
-                    {formatVolume(stock.float)}
+                <td className="px-4 py-2 whitespace-nowrap text-center font-mono">
+                  <span className="text-cyan-500 font-bold text-sm">
+                    {formatFloat(stock.float)}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap font-mono text-gray-900">
-                  {stock.relativeVolume ? parseFloat(stock.relativeVolume).toLocaleString() : '-'}
+                <td className="px-4 py-2 whitespace-nowrap text-center font-mono text-black text-sm">
+                  {stock.relativeVolume ? `${parseFloat(stock.relativeVolume).toFixed(2)}` : '-'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap font-mono text-gray-900">
-                  {stock.relativeVolumeMin ? parseFloat(stock.relativeVolumeMin).toLocaleString() : '-'}
+                <td className="px-4 py-2 whitespace-nowrap text-center font-mono text-black text-sm">
+                  {stock.relativeVolumeMin ? parseFloat(stock.relativeVolumeMin).toFixed(0) : '-'}
                 </td>
               </tr>
             );
