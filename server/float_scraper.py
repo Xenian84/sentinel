@@ -4,6 +4,7 @@ import json
 import requests
 import sys
 from typing import Optional, Dict, Any
+from bs4 import BeautifulSoup
 
 def get_float_data(ticker: str) -> Optional[float]:
     """
@@ -11,8 +12,6 @@ def get_float_data(ticker: str) -> Optional[float]:
     Returns float shares as a number, or None if not found
     """
     try:
-        url = f'https://finance.yahoo.com/quote/{ticker}/key-statistics'
-        
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -24,11 +23,61 @@ def get_float_data(ticker: str) -> Optional[float]:
         
         session = requests.Session()
         session.headers.update(headers)
-        response = session.get(url, timeout=15)
-        response.raise_for_status()
-        html = response.text
+        
+        # Try multiple Yahoo Finance URLs
+        urls_to_try = [
+            f'https://finance.yahoo.com/quote/{ticker}/key-statistics',
+            f'https://finance.yahoo.com/quote/{ticker}',
+            f'https://finance.yahoo.com/quote/{ticker}/statistics'
+        ]
+        
+        html = None
+        for url in urls_to_try:
+            try:
+                response = session.get(url, timeout=15)
+                if response.status_code == 200:
+                    html = response.text
+                    break
+            except requests.exceptions.RequestException:
+                continue
+        
+        if not html:
+            return None
 
-        # Method 1: Extract JSON data from root.App.main
+        # Method 1: Parse HTML with BeautifulSoup to find Float in Share Statistics
+        try:
+            soup = BeautifulSoup(html, 'html.parser')
+            
+            # Look for "Float" text followed by a number
+            float_elements = soup.find_all(string=re.compile(r'Float', re.IGNORECASE))
+            for element in float_elements:
+                parent = element.parent
+                if parent:
+                    # Look for numbers in the same row or nearby elements
+                    row = parent.find_parent('tr') or parent.find_parent('div')
+                    if row:
+                        # Find all text containing numbers with M, B, K suffixes
+                        number_pattern = r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*([MBK]?)'
+                        numbers = re.findall(number_pattern, row.get_text(), re.IGNORECASE)
+                        for num_str, unit in numbers:
+                            try:
+                                num_val = float(num_str.replace(',', ''))
+                                if unit.upper() == 'B':
+                                    return num_val * 1000  # Convert to millions
+                                elif unit.upper() == 'M':
+                                    return num_val  # Already in millions
+                                elif unit.upper() == 'K':
+                                    return num_val / 1000  # Convert to millions
+                                elif num_val > 1000000:  # Assume raw shares, convert to millions
+                                    return num_val / 1000000
+                                elif num_val > 1:  # Likely already in millions
+                                    return num_val
+                            except ValueError:
+                                continue
+        except Exception:
+            pass
+
+        # Method 2: Extract JSON data from root.App.main
         pattern = r'root\.App\.main = (.*?);\n'
         match = re.search(pattern, html)
 
@@ -65,20 +114,44 @@ def get_float_data(ticker: str) -> Optional[float]:
             except ValueError:
                 pass
 
-        # Method 3: Search for float in text content
+        # Method 3: Search for float in Share Statistics section with proper conversion
         float_patterns = [
-            r'Float[^0-9]*([0-9,]+\.?[0-9]*)[^0-9]*[MBK]?',
-            r'Shares Outstanding[^0-9]*([0-9,]+\.?[0-9]*)[^0-9]*[MBK]?'
+            r'Float[^>]*?(?:class="[^"]*"[^>]*>)*\s*([0-9,]+\.?[0-9]*)\s*([MBK]?)',
+            r'"floatShares"[^}]*"fmt":"([^"]*)"',
+            r'Float.*?([0-9,]+\.?[0-9]*)\s*([MBK])',
+            r'Shares Outstanding.*?([0-9,]+\.?[0-9]*)\s*([MBK])'
         ]
         
         for pattern in float_patterns:
-            matches = re.findall(pattern, html, re.IGNORECASE)
+            matches = re.findall(pattern, html, re.IGNORECASE | re.DOTALL)
             if matches:
                 try:
-                    # Convert text number to float
-                    num_str = matches[0].replace(',', '')
-                    return float(num_str)
-                except ValueError:
+                    if len(matches[0]) == 2:  # Number and unit
+                        num_str, unit = matches[0]
+                        num_str = num_str.replace(',', '')
+                        float_val = float(num_str)
+                        
+                        # Convert based on unit
+                        if unit.upper() == 'B':
+                            return float_val * 1000  # Convert billions to millions
+                        elif unit.upper() == 'M':
+                            return float_val  # Already in millions
+                        elif unit.upper() == 'K':
+                            return float_val / 1000  # Convert thousands to millions
+                        else:
+                            return float_val / 1000000  # Convert raw shares to millions
+                    else:  # Just number or formatted string
+                        num_str = str(matches[0]).replace(',', '')
+                        # Check if it contains M, B, K
+                        if 'M' in num_str.upper():
+                            return float(num_str.upper().replace('M', ''))
+                        elif 'B' in num_str.upper():
+                            return float(num_str.upper().replace('B', '')) * 1000
+                        elif 'K' in num_str.upper():
+                            return float(num_str.upper().replace('K', '')) / 1000
+                        else:
+                            return float(num_str)
+                except (ValueError, IndexError):
                     continue
         
         return None
