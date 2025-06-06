@@ -689,11 +689,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/small-cap-momentum", async (req, res) => {
     try {
       const stocks = await storage.getTopGappers();
-      const smallCapStocks = stocks.filter(stock => {
+      const filteredStocks = stocks.filter(stock => {
         const price = parseFloat(stock.price || '0');
-        return price >= 1 && price <= 50; // Small cap price range
-      });
-      res.json(smallCapStocks);
+        const gapPercent = parseFloat(stock.gapPercentage || '0');
+        const volume = stock.volume || 0;
+        const relativeVol = parseFloat(stock.relativeVolume || '0');
+        
+        // Small Cap + High of Day Momentum criteria
+        const isSmallCap = price >= 1 && price <= 50; // Small cap price range
+        const hasPositiveGap = gapPercent > 0; // Positive momentum
+        const hasHighVolume = volume > 500000; // Significant volume
+        const hasRelativeVolume = relativeVol > 1.5; // Above average volume
+        
+        return isSmallCap && hasPositiveGap && hasHighVolume && hasRelativeVolume;
+      })
+      .sort((a, b) => parseFloat(b.gapPercentage || '0') - parseFloat(a.gapPercentage || '0')); // Sort by highest gap
+      
+      res.json(filteredStocks);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch small cap momentum data" });
     }

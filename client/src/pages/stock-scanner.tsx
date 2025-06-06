@@ -311,7 +311,7 @@ export default function StockScanner() {
                   value={filter}
                   onChange={(e) => setFilter(e.target.value as "all" | "positive" | "negative")}
                 >
-                  <option value="all">All Gappers</option>
+                  <option value="all">All Results</option>
                   <option value="positive">Positive Only</option>
                   <option value="negative">Negative Only</option>
                 </select>
