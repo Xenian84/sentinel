@@ -294,10 +294,9 @@ async function fetchTopGappers(): Promise<void> {
     
     if (shouldFetchFloat) {
       try {
-        // Only fetch for top 10 stocks to reduce API calls
-        const topStocks = sortedGappers.slice(0, 10);
-        const symbols = topStocks.map(stock => stock.symbol);
-        console.log(`Fetching float data for ${symbols.length} top gappers...`);
+        // Fetch float data for all stocks to ensure complete coverage
+        const symbols = sortedGappers.map(stock => stock.symbol);
+        console.log(`Fetching float data for ${symbols.length} stocks...`);
         const floatData = await fetchFloatData(symbols);
         
         // Update stocks with float data
