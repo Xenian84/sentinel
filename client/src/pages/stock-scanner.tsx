@@ -50,7 +50,13 @@ export default function StockScanner() {
   // Update last refresh time
   useEffect(() => {
     const now = new Date();
-    setLastUpdate(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    setLastUpdate(now.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      second: '2-digit',
+      timeZone: 'America/New_York',
+      hour12: true
+    }));
   }, [stocks]);
 
   // Handle WebSocket updates
@@ -124,7 +130,7 @@ export default function StockScanner() {
               <div className="flex items-center space-x-6 text-sm text-gray-300">
                 <div>
                   <span>Last Updated: </span>
-                  <span>{lastUpdate}</span>
+                  <span>{lastUpdate} ET</span>
                 </div>
                 <div className="bg-yellow-600 text-white px-3 py-1 rounded-lg font-bold">
                   High Priority: {highPriorityStocks} stocks

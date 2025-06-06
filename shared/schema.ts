@@ -19,7 +19,7 @@ export const stocks = pgTable("stocks", {
   relativeVolume: decimal("relative_volume", { precision: 10, scale: 2 }),
   relativeVolumeMin: decimal("relative_volume_min", { precision: 10, scale: 2 }),
   hasNews: boolean("has_news").default(false),
-  newsCount: integer("news_count").default(0),
+  newsCount: integer("news_count").default(0).notNull(),
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
@@ -54,8 +54,8 @@ export type StockNews = typeof stockNews.$inferSelect;
 export type InsertStockNews = z.infer<typeof insertStockNewsSchema>;
 
 // API response types
-export interface StockGapper extends Stock {
-  newsCount?: number;
+export interface StockGapper extends Omit<Stock, 'newsCount'> {
+  newsCount: number;
 }
 
 export interface MarketStatus {

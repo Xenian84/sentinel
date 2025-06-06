@@ -215,9 +215,7 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                     >
                       {stock.symbol}
                     </a>
-                    {(stock.newsCount ?? 0) > 0 && (
-                      <span className="bg-gray-600 text-white text-xs px-1 rounded ml-1">{stock.newsCount}</span>
-                    )}
+
                     {/* Proprietary scanning condition indicators */}
                     <div className="flex flex-wrap gap-1">
                       {conditions.volume5x && (
