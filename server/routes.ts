@@ -106,6 +106,169 @@ async function fetchFromPolygon(endpoint: string): Promise<any> {
   }
 }
 
+// Technical Analysis Helper Functions
+function calculateRSI(prices: number[], period: number = 14): number {
+  if (prices.length < period + 1) return 50; // Default neutral RSI
+  
+  let gains = 0;
+  let losses = 0;
+  
+  // Calculate initial average gain/loss
+  for (let i = 1; i <= period; i++) {
+    const change = prices[i] - prices[i - 1];
+    if (change > 0) gains += change;
+    else losses += Math.abs(change);
+  }
+  
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  
+  // Calculate remaining RSI values using Wilder's smoothing
+  for (let i = period + 1; i < prices.length; i++) {
+    const change = prices[i] - prices[i - 1];
+    const gain = change > 0 ? change : 0;
+    const loss = change < 0 ? Math.abs(change) : 0;
+    
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+  }
+  
+  if (avgLoss === 0) return 100;
+  const rs = avgGain / avgLoss;
+  return 100 - (100 / (1 + rs));
+}
+
+function calculateEMA(prices: number[], period: number): number[] {
+  const emas = [];
+  const multiplier = 2 / (period + 1);
+  
+  // Start with SMA for first EMA value
+  let sum = 0;
+  for (let i = 0; i < period; i++) {
+    sum += prices[i];
+  }
+  emas.push(sum / period);
+  
+  // Calculate remaining EMAs
+  for (let i = period; i < prices.length; i++) {
+    const ema = (prices[i] * multiplier) + (emas[emas.length - 1] * (1 - multiplier));
+    emas.push(ema);
+  }
+  
+  return emas;
+}
+
+function calculateSMA(prices: number[], period: number): number {
+  if (prices.length < period) return prices[prices.length - 1] || 0;
+  
+  const recent = prices.slice(-period);
+  return recent.reduce((sum, price) => sum + price, 0) / period;
+}
+
+async function calculateTechnicalIndicators(symbol: string): Promise<{
+  rsi: number;
+  macd: number;
+  macdSignal: number;
+  macdHistogram: number;
+  sma20: number;
+  sma50: number;
+  avgVolume20d: number;
+} | null> {
+  try {
+    // Get 60 days of historical data for calculations
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    const historicalData = await fetchFromPolygon(
+      `/v2/aggs/ticker/${symbol}/range/1/day/${startDate}/${endDate}?adjusted=true&sort=asc`
+    );
+    
+    if (!historicalData.results || historicalData.results.length < 20) {
+      return null; // Insufficient data
+    }
+    
+    const bars = historicalData.results;
+    const closes = bars.map((bar: any) => bar.c);
+    const volumes = bars.map((bar: any) => bar.v);
+    
+    // Calculate RSI (14-period)
+    const rsi = calculateRSI(closes, 14);
+    
+    // Calculate MACD (12, 26, 9)
+    const ema12 = calculateEMA(closes, 12);
+    const ema26 = calculateEMA(closes, 26);
+    
+    const macdLine = [];
+    const startIndex = Math.max(0, ema26.length - ema12.length);
+    
+    for (let i = startIndex; i < ema12.length; i++) {
+      macdLine.push(ema12[i] - ema26[i - startIndex]);
+    }
+    
+    const macdSignalLine = calculateEMA(macdLine, 9);
+    const currentMacd = macdLine[macdLine.length - 1] || 0;
+    const currentSignal = macdSignalLine[macdSignalLine.length - 1] || 0;
+    const macdHistogram = currentMacd - currentSignal;
+    
+    // Calculate SMAs
+    const sma20 = calculateSMA(closes, 20);
+    const sma50 = calculateSMA(closes, 50);
+    
+    // Calculate average volume
+    const avgVolume20d = calculateSMA(volumes, 20);
+    
+    return {
+      rsi,
+      macd: currentMacd,
+      macdSignal: currentSignal,
+      macdHistogram,
+      sma20,
+      sma50,
+      avgVolume20d
+    };
+  } catch (error) {
+    console.error(`Technical analysis error for ${symbol}:`, error);
+    return null;
+  }
+}
+
+function passesGoodRSIFilter(stock: any, technicals: any): boolean {
+  const currentPrice = parseFloat(stock.price || '0');
+  const currentVolume = parseFloat(stock.volume || '0');
+  
+  // Core RSI Filter Conditions:
+  
+  // 1. RSI (14) > 50 - Confirms uptrend (above neutral)
+  const rsiAbove50 = technicals.rsi > 50;
+  
+  // 2. RSI between 55-70 - Sweet spot for strong but not overbought momentum
+  const rsiBetween55_70 = technicals.rsi >= 55 && technicals.rsi <= 70;
+  
+  // 3. RSI Increasing - Would need previous RSI values, using MACD histogram as proxy
+  const rsiIncreasing = technicals.macdHistogram > 0;
+  
+  // Advanced Combo Filters:
+  
+  // Price above 20-day and 50-day MA → trend confirmed
+  const priceAbove20MA = currentPrice > technicals.sma20;
+  const priceAbove50MA = currentPrice > technicals.sma50;
+  const priceAboveMA = priceAbove20MA && priceAbove50MA;
+  
+  // MACD > 0 and MACD Histogram rising → momentum aligned
+  const macdPositive = technicals.macd > 0;
+  const macdHistogramRising = technicals.macdHistogram > 0;
+  const macdAligned = macdPositive && macdHistogramRising;
+  
+  // Volume > average volume (20d) → confirms real buying interest
+  const volumeAboveAverage = currentVolume > technicals.avgVolume20d;
+  
+  // Apply Good RSI Filter criteria
+  const coreRSIFilter = rsiAbove50 && rsiBetween55_70 && rsiIncreasing;
+  const advancedCombo = priceAboveMA && macdAligned && volumeAboveAverage;
+  
+  return coreRSIFilter && advancedCombo;
+}
+
 async function fetchFloatData(tickers: string[]): Promise<Record<string, number | null>> {
   return new Promise((resolve, reject) => {
     if (tickers.length === 0) {
@@ -694,51 +857,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/rsi-trend", async (req, res) => {
     try {
       const stocks = await storage.getTopGappers();
+      const rsiStocks = [];
       
-      // Good RSI Filter for Bullish Trend - Based on provided specifications
-      const rsiStocks = stocks.filter(stock => {
-        const gapPercent = parseFloat(stock.gapPercentage || '0');
-        const relativeVolume = parseFloat(stock.relativeVolume || '0');
-        const price = parseFloat(stock.price || '0');
-        
-        // Good RSI Filter for Bullish Trend
-        
-        // 1. RSI (14) > 50 - Confirms uptrend (above neutral)
-        // Positive gaps indicate bullish RSI above 50
-        const rsiAbove50 = gapPercent > 0;
-        
-        // 2. RSI between 55-70 - Sweet spot for strong momentum
-        // Gap percentage >= 5% indicates RSI in strong momentum zone
-        const rsiBetween55_70 = gapPercent >= 5;
-        
-        // 3. RSI Increasing - Confirms acceleration in momentum  
-        // High relative volume indicates RSI momentum acceleration
-        const rsiIncreasing = relativeVolume >= 200;
-        
-        // Advanced Combo (if using with technical indicators):
-        
-        // Price above 20-day and 50-day MA → trend confirmed
-        const priceAboveMA = price >= 1.00 && price <= 50.00; // Price range filter
-        
-        // MACD > 0 and MACD Histogram rising → momentum aligned
-        // Using gap percentage > 0 as MACD positive indicator
-        const macdPositive = gapPercent > 0;
-        
-        // Volume > average volume (20d) → confirms real buying interest
-        const volumeAboveAverage = relativeVolume >= 200; // 2x+ average volume
-        
-        // Apply core RSI Filter criteria for bullish trend identification
-        const coreRSIFilter = rsiAbove50 && rsiBetween55_70 && rsiIncreasing;
-        
-        // Apply Advanced Combo filters (technical indicators)
-        const advancedCombo = priceAboveMA && macdPositive && volumeAboveAverage;
-        
-        // Stock must pass both core RSI criteria AND advanced combo filters
-        return coreRSIFilter && advancedCombo;
-      });
+      // Process top 15 stocks for technical analysis (API efficiency)
+      for (const stock of stocks.slice(0, 15)) {
+        try {
+          const technicals = await calculateTechnicalIndicators(stock.symbol);
+          
+          if (technicals && passesGoodRSIFilter(stock, technicals)) {
+            rsiStocks.push({
+              ...stock,
+              rsi: Math.round(technicals.rsi * 100) / 100,
+              macd: Math.round(technicals.macd * 1000) / 1000,
+              macdSignal: Math.round(technicals.macdSignal * 1000) / 1000,
+              macdHistogram: Math.round(technicals.macdHistogram * 1000) / 1000,
+              sma20: Math.round(technicals.sma20 * 100) / 100,
+              sma50: Math.round(technicals.sma50 * 100) / 100,
+              avgVolume20d: technicals.avgVolume20d
+            });
+          }
+        } catch (error) {
+          console.log(`Technical analysis failed for ${stock.symbol}: ${error.message}`);
+        }
+      }
       
       res.json(rsiStocks);
     } catch (error) {
+      console.error('Error fetching RSI trend stocks:', error);
       res.status(500).json({ error: "Failed to fetch RSI trend data" });
     }
   });
