@@ -109,6 +109,47 @@ export default function StockScanner() {
     Object.values(stock).filter(Boolean).length >= 4 // 3+ conditions (excluding symbol)
   ).length;
 
+  // Generate dynamic time range based on current time
+  const getCurrentTimeRange = () => {
+    const now = new Date();
+    const currentTime = now.toLocaleTimeString('en-US', { 
+      timeZone: 'America/New_York',
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    // Calculate 5-minute interval start
+    const minutes = now.getMinutes();
+    const intervalStart = Math.floor(minutes / 5) * 5;
+    const intervalEnd = intervalStart + 5;
+    
+    const startTime = new Date(now);
+    startTime.setMinutes(intervalStart, 0, 0);
+    
+    const endTime = new Date(now);
+    endTime.setMinutes(intervalEnd, 0, 0);
+    
+    const startStr = startTime.toLocaleTimeString('en-US', {
+      timeZone: 'America/New_York',
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    const endStr = endTime.toLocaleTimeString('en-US', {
+      timeZone: 'America/New_York',
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    return `${startStr} - ${endStr}`;
+  };
+
   return (
     <div className="min-h-screen bg-financial-bg font-roboto">
       {/* Header */}
@@ -163,7 +204,7 @@ export default function StockScanner() {
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Top Gappers</h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  09:25:00 - 09:30:00 (Last updated {lastUpdate} - 
+                  {getCurrentTimeRange()} (Last updated {lastUpdate} - 
                   <span className={`ml-1 ${isConnected ? 'text-financial-success' : 'text-red-500'}`}>
                     {isConnected ? 'Online' : 'Offline'}
                   </span>)
