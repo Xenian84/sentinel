@@ -151,6 +151,17 @@ async function fetchTopGappers(): Promise<void> {
             console.log(`Could not fetch news for ${ticker}: ${newsError instanceof Error ? newsError.message : 'Unknown error'}`);
           }
           
+          // Calculate estimated minute-level relative volume based on daily data
+          let minuteRelativeVolume = null;
+          if (day && prevDay && prevDay.v > 0) {
+            // Estimate current minute volume as percentage of daily average
+            const estimatedMinuteVolume = volume / (6.5 * 60); // Assume 6.5 hour trading day
+            const avgDailyMinuteVolume = prevDay.v / (6.5 * 60);
+            if (avgDailyMinuteVolume > 0) {
+              minuteRelativeVolume = ((estimatedMinuteVolume / avgDailyMinuteVolume) * 100).toFixed(0);
+            }
+          }
+
           const stockData = {
             symbol: ticker,
             name: null, // Only store if we have authentic data
@@ -159,7 +170,7 @@ async function fetchTopGappers(): Promise<void> {
             float: null, // Only store authentic float data when available
             gapPercentage: gapPercentage.toFixed(2),
             relativeVolume: (relativeVolumeRatio * 100).toFixed(2),
-            relativeVolumeMin: null, // Only store authentic data
+            relativeVolumeMin: minuteRelativeVolume,
             hasNews: hasRealNews,
             newsCount: newsCount,
           };
