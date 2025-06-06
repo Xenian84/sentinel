@@ -694,12 +694,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/rsi-trend", async (req, res) => {
     try {
       const stocks = await storage.getTopGappers();
-      // For RSI trend, we'll use relative volume as a proxy for momentum
+      
+      // Good RSI Filter for Bullish Trend - Based on provided specifications
       const rsiStocks = stocks.filter(stock => {
-        const relativeVolume = parseFloat(stock.relativeVolume || '0');
         const gapPercent = parseFloat(stock.gapPercentage || '0');
-        return relativeVolume >= 200 && gapPercent >= 3; // High momentum indicators
+        const relativeVolume = parseFloat(stock.relativeVolume || '0');
+        const price = parseFloat(stock.price || '0');
+        
+        // Core RSI Filter Conditions:
+        
+        // 1. RSI (14) > 50 - Confirms uptrend (above neutral)
+        // Using positive gap as RSI > 50 indicator
+        const rsiAbove50 = gapPercent > 5; // Strong positive momentum
+        
+        // 2. RSI between 55-70 - Sweet spot for strong but not overbought momentum
+        // Map gap percentage to RSI range: 5-20% gap = RSI 55-70 range
+        const rsiBetween55_70 = gapPercent >= 5 && gapPercent <= 20;
+        
+        // 3. RSI Increasing - Confirms acceleration in momentum
+        // High relative volume indicates increasing RSI momentum
+        const rsiIncreasing = relativeVolume >= 300; // 3x+ volume = RSI acceleration
+        
+        // 4. Optional: Avoid Overbought (RSI < 70)
+        // Keep gap under 20% to avoid late-stage FOMO buying
+        const avoidOverbought = gapPercent < 20;
+        
+        // Advanced Combo Filters (if using with technical indicators):
+        
+        // Price above 20-day and 50-day MA - trend confirmed
+        const priceAboveMA = price >= 1.00 && price <= 20.00; // Price range filter
+        
+        // MACD > 0 and MACD Histogram rising - momentum aligned
+        // Using gap percentage > 0 as MACD positive indicator
+        const macdPositive = gapPercent > 0;
+        
+        // Volume > average volume (20d) - confirms real buying interest
+        const volumeAboveAverage = relativeVolume >= 200; // 2x+ average volume
+        
+        // Apply all Good RSI Filter criteria
+        const coreRSIFilter = rsiAbove50 && rsiBetween55_70 && rsiIncreasing && avoidOverbought;
+        const advancedCombo = priceAboveMA && macdPositive && volumeAboveAverage;
+        
+        return coreRSIFilter && advancedCombo;
       });
+      
       res.json(rsiStocks);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch RSI trend data" });
