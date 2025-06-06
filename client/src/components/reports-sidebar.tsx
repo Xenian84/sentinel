@@ -28,7 +28,7 @@ export default function ReportsSidebar({ onReportSelect, currentReport }: Report
 
   const reportCategories: ReportCategory[] = [
     {
-      title: "Small Cap Reports",
+      title: "All Reports",
       reports: [
         {
           id: "small-cap-high-momentum",
@@ -107,12 +107,7 @@ export default function ReportsSidebar({ onReportSelect, currentReport }: Report
           description: "Highest volume in last 5 minutes",
           endpoint: "/api/reports/volume-5min",
           icon: Volume2
-        }
-      ]
-    },
-    {
-      title: "Large Cap Reports",
-      reports: [
+        },
         {
           id: "large-cap-high-momentum",
           name: "Large Cap - High Of Day Momentum",

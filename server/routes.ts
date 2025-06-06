@@ -336,6 +336,235 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Report endpoints
+  app.get("/api/reports/small-cap-momentum", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      const smallCapStocks = stocks.filter(stock => {
+        const price = parseFloat(stock.price || '0');
+        return price >= 1 && price <= 50; // Small cap price range
+      });
+      res.json(smallCapStocks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch small cap momentum data" });
+    }
+  });
+
+  app.get("/api/reports/ross-gappers", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      // Ross Cameron criteria: 5%+ gap, $1-20 price, high relative volume
+      const rossStocks = stocks.filter(stock => {
+        const gapPercent = Math.abs(parseFloat(stock.gapPercentage || '0'));
+        const price = parseFloat(stock.price || '0');
+        const relativeVolume = parseFloat(stock.relativeVolume || '0');
+        return gapPercent >= 5 && price >= 1 && price <= 20 && relativeVolume >= 200;
+      });
+      res.json(rossStocks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch Ross's Top Gappers" });
+    }
+  });
+
+  app.get("/api/reports/reversal", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      // Stocks showing reversal patterns (negative gaps now turning positive)
+      const reversalStocks = stocks.filter(stock => {
+        const gapPercent = parseFloat(stock.gapPercentage || '0');
+        const relativeVolume = parseFloat(stock.relativeVolume || '0');
+        return gapPercent < -2 && relativeVolume >= 150; // Down but with high volume (potential reversal)
+      });
+      res.json(reversalStocks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch reversal data" });
+    }
+  });
+
+  app.get("/api/reports/after-hours-gainers", async (req, res) => {
+    try {
+      // For after-hours, we'll focus on stocks with significant gaps (indicating after-hours movement)
+      const stocks = await storage.getTopGappers();
+      const afterHoursStocks = stocks.filter(stock => {
+        const gapPercent = parseFloat(stock.gapPercentage || '0');
+        return gapPercent >= 10; // Strong pre-market/after-hours movement
+      });
+      res.json(afterHoursStocks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch after hours gainers" });
+    }
+  });
+
+  app.get("/api/reports/continuation", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      // Stocks continuing upward momentum
+      const continuationStocks = stocks.filter(stock => {
+        const gapPercent = parseFloat(stock.gapPercentage || '0');
+        const relativeVolume = parseFloat(stock.relativeVolume || '0');
+        return gapPercent >= 5 && relativeVolume >= 300; // Strong positive momentum
+      });
+      res.json(continuationStocks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch continuation data" });
+    }
+  });
+
+  app.get("/api/reports/recent-ipo", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      // Filter for potential recent IPOs (higher volatility, specific price ranges)
+      const ipoStocks = stocks.filter(stock => {
+        const price = parseFloat(stock.price || '0');
+        const gapPercent = Math.abs(parseFloat(stock.gapPercentage || '0'));
+        const relativeVolume = parseFloat(stock.relativeVolume || '0');
+        return price >= 5 && price <= 100 && gapPercent >= 10 && relativeVolume >= 500;
+      });
+      res.json(ipoStocks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch recent IPO data" });
+    }
+  });
+
+  app.get("/api/reports/top-gainers", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      const gainers = stocks.filter(stock => {
+        const gapPercent = parseFloat(stock.gapPercentage || '0');
+        return gapPercent > 0;
+      }).sort((a, b) => parseFloat(b.gapPercentage || '0') - parseFloat(a.gapPercentage || '0'));
+      res.json(gainers);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch top gainers" });
+    }
+  });
+
+  app.get("/api/reports/top-losers", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      const losers = stocks.filter(stock => {
+        const gapPercent = parseFloat(stock.gapPercentage || '0');
+        return gapPercent < 0;
+      }).sort((a, b) => parseFloat(a.gapPercentage || '0') - parseFloat(b.gapPercentage || '0'));
+      res.json(losers);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch top losers" });
+    }
+  });
+
+  app.get("/api/reports/relative-volume", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      const highVolumeStocks = stocks.sort((a, b) => 
+        parseFloat(b.relativeVolume || '0') - parseFloat(a.relativeVolume || '0')
+      );
+      res.json(highVolumeStocks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch relative volume data" });
+    }
+  });
+
+  app.get("/api/reports/volume-5min", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      const highVolume5MinStocks = stocks.filter(stock => 
+        stock.relativeVolumeMin && parseFloat(stock.relativeVolumeMin) >= 200
+      ).sort((a, b) => 
+        parseFloat(b.relativeVolumeMin || '0') - parseFloat(a.relativeVolumeMin || '0')
+      );
+      res.json(highVolume5MinStocks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch 5-minute volume data" });
+    }
+  });
+
+  app.get("/api/reports/large-cap-momentum", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      const largeCap = stocks.filter(stock => {
+        const price = parseFloat(stock.price || '0');
+        return price >= 50; // Large cap typically higher priced
+      });
+      res.json(largeCap);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch large cap momentum data" });
+    }
+  });
+
+  app.get("/api/reports/large-cap-gappers", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      const largeCap = stocks.filter(stock => {
+        const price = parseFloat(stock.price || '0');
+        const gapPercent = Math.abs(parseFloat(stock.gapPercentage || '0'));
+        return price >= 20 && gapPercent >= 3; // Large cap stocks with significant gaps
+      });
+      res.json(largeCap);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch large cap gappers" });
+    }
+  });
+
+  app.get("/api/reports/earnings-gap", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      // Stocks with news and significant gaps (likely earnings-related)
+      const earningsStocks = stocks.filter(stock => {
+        const gapPercent = Math.abs(parseFloat(stock.gapPercentage || '0'));
+        const hasNews = stock.hasNews;
+        const price = parseFloat(stock.price || '0');
+        return hasNews && gapPercent >= 5 && price >= 20; // Large cap with news and gap
+      });
+      res.json(earningsStocks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch earnings gap data" });
+    }
+  });
+
+  app.get("/api/reports/penny-gappers", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      const pennyStocks = stocks.filter(stock => {
+        const price = parseFloat(stock.price || '0');
+        const gapPercent = Math.abs(parseFloat(stock.gapPercentage || '0'));
+        return price >= 0.01 && price <= 5 && gapPercent >= 10; // Penny stocks with big moves
+      });
+      res.json(pennyStocks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch penny gappers" });
+    }
+  });
+
+  app.get("/api/reports/halt", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      // Stocks with extreme gaps likely to be halted or recently resumed
+      const haltStocks = stocks.filter(stock => {
+        const gapPercent = Math.abs(parseFloat(stock.gapPercentage || '0'));
+        const relativeVolume = parseFloat(stock.relativeVolume || '0');
+        return gapPercent >= 50 || relativeVolume >= 1000; // Extreme movement suggesting halts
+      });
+      res.json(haltStocks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch halt data" });
+    }
+  });
+
+  app.get("/api/reports/rsi-trend", async (req, res) => {
+    try {
+      const stocks = await storage.getTopGappers();
+      // For RSI trend, we'll use relative volume as a proxy for momentum
+      const rsiStocks = stocks.filter(stock => {
+        const relativeVolume = parseFloat(stock.relativeVolume || '0');
+        const gapPercent = parseFloat(stock.gapPercentage || '0');
+        return relativeVolume >= 200 && gapPercent >= 3; // High momentum indicators
+      });
+      res.json(rsiStocks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch RSI trend data" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server for real-time updates
