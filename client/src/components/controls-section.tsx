@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
 
 interface ControlsSectionProps {
   isConnected: boolean;
@@ -11,6 +12,16 @@ interface ControlsSectionProps {
   lastUpdate: string;
 }
 
+interface APIStatus {
+  connected: boolean;
+  rateLimit: {
+    current: number;
+    max: number;
+    resetTime?: string;
+  };
+  lastRequest: string;
+}
+
 export default function ControlsSection({
   isConnected,
   totalGappers,
@@ -18,6 +29,11 @@ export default function ControlsSection({
   negativeGappers,
   lastUpdate,
 }: ControlsSectionProps) {
+  const { data: apiStatus } = useQuery<APIStatus>({
+    queryKey: ["/api/status"],
+    refetchInterval: 30000, // Check every 30 seconds
+  });
+
   return (
     <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
       {/* Real-time Connection Status */}
@@ -58,7 +74,9 @@ export default function ControlsSection({
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">Rate Limit</span>
-            <span className="text-sm text-gray-900">84/100</span>
+            <span className="text-sm text-gray-900">
+              {apiStatus?.rateLimit ? `${apiStatus.rateLimit.current}/${apiStatus.rateLimit.max}` : '--/--'}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">Last Request</span>

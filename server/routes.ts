@@ -73,11 +73,28 @@ function isMarketOpen(): boolean {
   return currentMinutes >= marketOpen && currentMinutes < marketClose;
 }
 
+// Rate limit tracking
+let apiRateLimit = { current: 0, max: 100, resetTime: null };
+
 async function fetchFromPolygon(endpoint: string): Promise<any> {
   const url = `${POLYGON_BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}apikey=${POLYGON_API_KEY}`;
   
   try {
     const response = await fetch(url);
+    
+    // Track rate limit from headers
+    const remaining = response.headers.get('X-RateLimit-Remaining');
+    const limit = response.headers.get('X-RateLimit-Limit');
+    const reset = response.headers.get('X-RateLimit-Reset');
+    
+    if (remaining && limit) {
+      apiRateLimit = {
+        current: parseInt(limit) - parseInt(remaining),
+        max: parseInt(limit),
+        resetTime: reset ? new Date(parseInt(reset) * 1000) : null
+      };
+    }
+    
     if (!response.ok) {
       throw new Error(`Polygon API error: ${response.status} ${response.statusText}`);
     }
@@ -354,6 +371,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to get market status" });
+    }
+  });
+
+  // Get API status with real rate limit data
+  app.get("/api/status", async (req, res) => {
+    try {
+      res.json({
+        connected: true,
+        rateLimit: apiRateLimit,
+        lastRequest: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get API status" });
     }
   });
 
