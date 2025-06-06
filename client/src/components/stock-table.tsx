@@ -97,7 +97,7 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
   };
 
   const formatFloat = (floatValue: number | null): string => {
-    if (!floatValue || floatValue === 0) return '-';
+    if (floatValue === null || floatValue === undefined || floatValue <= 0) return '-';
     
     // Yahoo Finance returns float in millions, so convert to display format
     const floatInMillions = floatValue;
