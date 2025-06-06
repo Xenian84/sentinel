@@ -170,7 +170,7 @@ async function fetchTopGappers(): Promise<void> {
             float: null, // Only store authentic float data when available
             gapPercentage: gapPercentage.toFixed(2),
             relativeVolume: (relativeVolumeRatio * 100).toFixed(2),
-            relativeVolumeMin: minuteRelativeVolume,
+            relativeVolumeMin: minuteRelativeVolume ? parseFloat(minuteRelativeVolume).toFixed(2) : null,
             hasNews: hasRealNews,
             newsCount: newsCount,
           };
