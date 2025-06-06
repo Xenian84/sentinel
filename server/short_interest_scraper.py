@@ -121,9 +121,12 @@ def get_multiple_short_data(tickers: list) -> Dict[str, Dict[str, Optional[float
     
     for i, ticker in enumerate(tickers):
         try:
-            # Add rate limiting
+            # Add rate limiting with progressive batching
             if i > 0:
-                time.sleep(0.5)  # 500ms delay between requests
+                if i % 20 == 0:  # Longer pause every 20 requests
+                    time.sleep(2.0)
+                else:
+                    time.sleep(0.1)  # Reduced to 100ms for faster processing
             
             short_data = get_short_data(ticker)
             results[ticker] = short_data
