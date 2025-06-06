@@ -113,7 +113,7 @@ async function fetchFloatData(tickers: string[]): Promise<Record<string, number 
       return;
     }
 
-    const pythonProcess = spawn('python3', ['server/float_scraper.py', ...tickers]);
+    const pythonProcess = spawn('python3', ['server/float_scraper_yfinance.py', ...tickers]);
     
     let stdout = '';
     let stderr = '';
@@ -286,8 +286,8 @@ async function fetchTopGappers(): Promise<void> {
     
     console.log(`Top gappers: ${sortedGappers.slice(0, 5).map(s => `${s.symbol} (${s.gapPercentage}%)`).join(', ')}`);
     
-    // Fetch float data periodically to avoid rate limiting (every 5th update)
-    const shouldFetchFloat = Math.random() < 0.2; // 20% chance per update cycle
+    // Fetch float data more frequently since yfinance is reliable
+    const shouldFetchFloat = Math.random() < 0.6; // 60% chance per update cycle
     
     if (shouldFetchFloat) {
       try {
