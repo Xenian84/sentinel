@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import { spawn } from "child_process";
 import { storage } from "./storage";
 import { insertStockSchema, insertStockNewsSchema } from "@shared/schema";
 import { z } from "zod";
@@ -103,6 +104,48 @@ async function fetchFromPolygon(endpoint: string): Promise<any> {
     console.error('Error fetching from Polygon API:', error);
     throw error;
   }
+}
+
+async function fetchFloatData(tickers: string[]): Promise<Record<string, number | null>> {
+  return new Promise((resolve, reject) => {
+    if (tickers.length === 0) {
+      resolve({});
+      return;
+    }
+
+    const pythonProcess = spawn('python3', ['server/float_scraper.py', ...tickers]);
+    
+    let stdout = '';
+    let stderr = '';
+    
+    pythonProcess.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+    
+    pythonProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+    
+    pythonProcess.on('close', (code) => {
+      if (code === 0) {
+        try {
+          const results = JSON.parse(stdout.trim());
+          resolve(results);
+        } catch (error) {
+          console.error('Error parsing float data:', error);
+          resolve({});
+        }
+      } else {
+        console.error('Float scraper error:', stderr);
+        resolve({});
+      }
+    });
+    
+    pythonProcess.on('error', (error) => {
+      console.error('Failed to start float scraper:', error);
+      resolve({});
+    });
+  });
 }
 
 async function fetchTopGappers(): Promise<void> {
@@ -243,7 +286,29 @@ async function fetchTopGappers(): Promise<void> {
     
     console.log(`Top gappers: ${sortedGappers.slice(0, 5).map(s => `${s.symbol} (${s.gapPercentage}%)`).join(', ')}`);
     
-    return sortedGappers;
+    // Fetch float data for top gappers to improve supply indicators
+    try {
+      const symbols = sortedGappers.map(stock => stock.symbol);
+      console.log(`Fetching float data for ${symbols.length} top gappers...`);
+      const floatData = await fetchFloatData(symbols);
+      
+      // Update stocks with float data
+      const updatedGappers = sortedGappers.map(stock => ({
+        ...stock,
+        float: floatData[stock.symbol] || null
+      }));
+      
+      // Save updated stocks with float data
+      for (const stock of updatedGappers) {
+        await storage.upsertStock(stock);
+      }
+      
+      console.log(`Enhanced ${Object.keys(floatData).length} stocks with Yahoo Finance float data`);
+      return updatedGappers;
+    } catch (error) {
+      console.error('Error fetching float data:', error);
+      return sortedGappers;
+    }
   } catch (error) {
     console.error('Error fetching top gappers from Polygon API:', error);
     throw error;
