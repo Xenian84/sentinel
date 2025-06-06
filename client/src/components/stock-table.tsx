@@ -182,7 +182,7 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
               up10Percent: gapPercent >= 10,
               hasNewsEvent: hasNews,
               priceRange: price >= 1.00 && price <= 20.00,
-              lowFloat: float > 0 && float <= 10000000 // Less than 10M shares
+              lowFloat: float > 0 && float <= 10 // Less than or equal to 10M shares (float stored in millions)
             };
             
             // Count how many conditions are met
