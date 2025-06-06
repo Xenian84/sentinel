@@ -219,15 +219,26 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                 </td>
                 <td className="px-1 py-1 w-20">
                   <div className="flex flex-col space-y-1">
-                    <a 
-                      href={`https://www.tradingview.com/chart/?symbol=${stock.symbol}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-xs transition-colors"
-                      title={`View ${stock.symbol} chart on TradingView`}
-                    >
-                      {stock.symbol}
-                    </a>
+                    <div className="flex items-center gap-1">
+                      <a 
+                        href={`https://www.tradingview.com/chart/?symbol=${stock.symbol}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-xs transition-colors"
+                        title={`View ${stock.symbol} chart on TradingView`}
+                      >
+                        {stock.symbol}
+                      </a>
+                      {stock.hasNews && (
+                        <button
+                          onClick={() => onShowNews(stock.symbol)}
+                          className="bg-red-500 text-white text-xs px-1 py-0.5 rounded font-bold hover:bg-red-600 transition-colors"
+                          title={`Click to view news for ${stock.symbol}`}
+                        >
+                          NEWS
+                        </button>
+                      )}
+                    </div>
 
                     {/* Proprietary scanning condition indicators */}
                     <div className="flex flex-wrap gap-1">
