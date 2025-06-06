@@ -269,7 +269,7 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                   </span>
                 </td>
                 <td className="px-4 py-2 whitespace-nowrap text-center font-mono text-black text-sm">
-                  {stock.relativeVolume ? `${parseFloat(stock.relativeVolume).toFixed(2)}` : '-'}
+                  {stock.relativeVolume ? `${parseFloat(stock.relativeVolume).toFixed(0)}%` : '-'}
                 </td>
                 <td className="px-4 py-2 whitespace-nowrap text-center font-mono text-black text-sm">
                   {stock.relativeVolumeMin ? parseFloat(stock.relativeVolumeMin).toFixed(0) : '-'}
