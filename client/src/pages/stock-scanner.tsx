@@ -61,13 +61,14 @@ export default function StockScanner() {
     }));
   }, [stocks]);
 
-  // Handle WebSocket updates for real-time data
+  // Handle WebSocket updates for real-time data (only for default gappers view)
   useEffect(() => {
-    if (lastMessage?.type === 'stocks_update') {
+    if (lastMessage?.type === 'stocks_update' && currentReport === 'moys-top-gappers' && currentEndpoint.includes('filter=moys')) {
+      // Only apply WebSocket updates for the main Moys Top Gappers view
       setStocks(lastMessage.data || []);
       setIsLoading(false);
     }
-  }, [lastMessage]);
+  }, [lastMessage, currentReport, currentEndpoint]);
 
   // Load initial data when connected
   useEffect(() => {
