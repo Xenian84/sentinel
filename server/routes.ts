@@ -113,7 +113,7 @@ async function fetchFloatData(tickers: string[]): Promise<Record<string, number 
       return;
     }
 
-    const pythonProcess = spawn('python3', ['server/float_scraper_simple.py', ...tickers]);
+    const pythonProcess = spawn('python3', ['server/float_scraper.py', ...tickers]);
     
     let stdout = '';
     let stderr = '';
@@ -286,27 +286,37 @@ async function fetchTopGappers(): Promise<void> {
     
     console.log(`Top gappers: ${sortedGappers.slice(0, 5).map(s => `${s.symbol} (${s.gapPercentage}%)`).join(', ')}`);
     
-    // Fetch float data for top gappers to improve supply indicators
-    try {
-      const symbols = sortedGappers.map(stock => stock.symbol);
-      console.log(`Fetching float data for ${symbols.length} top gappers...`);
-      const floatData = await fetchFloatData(symbols);
-      
-      // Update stocks with float data
-      const updatedGappers = sortedGappers.map(stock => ({
-        ...stock,
-        float: floatData[stock.symbol] || null
-      }));
-      
-      // Save updated stocks with float data
-      for (const stock of updatedGappers) {
-        await storage.upsertStock(stock);
+    // Fetch float data periodically to avoid rate limiting (every 5th update)
+    const shouldFetchFloat = Math.random() < 0.2; // 20% chance per update cycle
+    
+    if (shouldFetchFloat) {
+      try {
+        // Only fetch for top 10 stocks to reduce API calls
+        const topStocks = sortedGappers.slice(0, 10);
+        const symbols = topStocks.map(stock => stock.symbol);
+        console.log(`Fetching float data for ${symbols.length} top gappers...`);
+        const floatData = await fetchFloatData(symbols);
+        
+        // Update stocks with float data
+        const updatedGappers = sortedGappers.map(stock => ({
+          ...stock,
+          float: floatData[stock.symbol] || stock.float || null // Keep existing float if fetch fails
+        }));
+        
+        // Save updated stocks with float data
+        for (const stock of updatedGappers) {
+          await storage.upsertStock(stock);
+        }
+        
+        const validFloats = Object.values(floatData).filter(f => f !== null).length;
+        console.log(`Enhanced ${validFloats} stocks with Yahoo Finance float data`);
+        return updatedGappers;
+      } catch (error) {
+        console.error('Error fetching float data:', error);
+        return sortedGappers;
       }
-      
-      console.log(`Enhanced ${Object.keys(floatData).length} stocks with Yahoo Finance float data`);
-      return updatedGappers;
-    } catch (error) {
-      console.error('Error fetching float data:', error);
+    } else {
+      // Use existing float data from storage
       return sortedGappers;
     }
   } catch (error) {
