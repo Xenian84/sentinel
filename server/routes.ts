@@ -544,19 +544,41 @@ async function fetchTopGappers(): Promise<void> {
 
 async function fetchStockNews(symbol: string): Promise<void> {
   try {
-    const data = await fetchFromPolygon(`/v2/reference/news?ticker=${symbol}&limit=10`) as PolygonNewsResponse;
+    const data = await fetchFromPolygon(`/v2/reference/news?ticker=${symbol}&limit=20`) as PolygonNewsResponse;
     
     if (data.status === "OK" && data.results) {
       for (const article of data.results) {
-        const newsData = {
-          symbol,
-          title: article.title,
-          summary: article.description,
-          publishedAt: new Date(article.published_utc),
-          url: article.article_url,
-        };
+        // Filter for articles that are specifically about this stock
+        const title = article.title.toLowerCase();
+        const description = article.description?.toLowerCase() || '';
+        const symbolLower = symbol.toLowerCase();
         
-        await storage.addStockNews(newsData);
+        // Check if article is specifically about this stock (not just mentioned)
+        const isStockSpecific = 
+          title.includes(symbolLower) || 
+          description.includes(symbolLower);
+        
+        // Skip general market news that only mentions the stock tangentially
+        const isGeneralMarket = 
+          title.includes('stocks rally') ||
+          title.includes('market') && title.includes('rebounds') ||
+          title.includes('jobs numbers') ||
+          title.includes('trump') ||
+          title.includes('tesla') && !title.includes(symbolLower) ||
+          title.includes('why on holdings') ||
+          (title.includes('stock') && !title.includes(symbolLower) && title.length > 50);
+        
+        if (isStockSpecific && !isGeneralMarket) {
+          const newsData = {
+            symbol,
+            title: article.title,
+            summary: article.description,
+            publishedAt: new Date(article.published_utc),
+            url: article.article_url,
+          };
+          
+          await storage.addStockNews(newsData);
+        }
       }
     }
   } catch (error) {
@@ -732,8 +754,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/stocks/:symbol/news/fetch", async (req, res) => {
     try {
       const { symbol } = req.params;
-      await fetchStockNews(symbol.toUpperCase());
-      const news = await storage.getStockNews(symbol.toUpperCase());
+      const symbolUpper = symbol.toUpperCase();
+      
+      // Clear existing news for this stock to avoid duplicates
+      const memStorage = storage as any;
+      if (memStorage.stockNews.has(symbolUpper)) {
+        memStorage.stockNews.delete(symbolUpper);
+      }
+      
+      await fetchStockNews(symbolUpper);
+      const news = await storage.getStockNews(symbolUpper);
+      
+      // Update stock hasNews flag
+      const stocks = memStorage.stocks;
+      if (stocks.has(symbolUpper)) {
+        const stock = stocks.get(symbolUpper);
+        stock.hasNews = news.length > 0;
+        stock.newsCount = news.length;
+      }
+      
       res.json({ message: "News fetched successfully", count: news.length });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch news" });
