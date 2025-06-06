@@ -225,7 +225,7 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                       )}
                       {conditions.up10Percent && (
                         <span className="bg-pink-500 text-white text-xs px-1 py-0.5 rounded font-bold" title="Up 10% or more on the day">
-                          10%
+                          %
                         </span>
                       )}
                       {conditions.hasNewsEvent && (
