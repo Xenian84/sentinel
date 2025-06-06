@@ -147,16 +147,16 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full">
+      <table className="min-w-full table-fixed">
         <thead className="bg-gray-100">
           <tr>
-            <SortHeader column="gap">Gap(%)</SortHeader>
-            <SortHeader column="symbol">Symbol / News</SortHeader>
-            <SortHeader column="price">Price</SortHeader>
-            <SortHeader column="volume">Volume</SortHeader>
-            <SortHeader column="float">Float</SortHeader>
-            <SortHeader column="relativeVolume">Relative Volume(Daily Rate)</SortHeader>
-            <SortHeader column="relativeVolumeMin">Relative Volume(Min %)</SortHeader>
+            <SortHeader column="gap"><div className="w-14 text-xs">Gap(%)</div></SortHeader>
+            <SortHeader column="symbol"><div className="w-28 text-xs">Symbol</div></SortHeader>
+            <SortHeader column="price"><div className="w-16 text-xs">Price</div></SortHeader>
+            <SortHeader column="volume"><div className="w-20 text-xs">Volume</div></SortHeader>
+            <SortHeader column="float"><div className="w-16 text-xs">Float</div></SortHeader>
+            <SortHeader column="relativeVolume"><div className="w-20 text-xs">Rel Vol(D)</div></SortHeader>
+            <SortHeader column="relativeVolumeMin"><div className="w-20 text-xs">Rel Vol(M)</div></SortHeader>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -199,18 +199,18 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                 key={stock.id} 
                 className={`hover:opacity-80 transition-opacity ${rowBgColor}`}
               >
-                <td className="px-4 py-2 whitespace-nowrap text-center">
-                  <span className="font-bold text-black text-sm">
-                    {gapPercent.toFixed(2)}
+                <td className="px-1 py-1 text-center w-14">
+                  <span className="font-bold text-black text-xs">
+                    {gapPercent.toFixed(1)}
                   </span>
                 </td>
-                <td className="px-4 py-2 whitespace-nowrap">
-                  <div className="flex items-center space-x-1">
+                <td className="px-1 py-1 w-28">
+                  <div className="flex flex-col space-y-1">
                     <a 
                       href={`https://www.tradingview.com/chart/?symbol=${stock.symbol}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-sm transition-colors"
+                      className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-xs transition-colors"
                       title={`View ${stock.symbol} chart on TradingView`}
                     >
                       {stock.symbol}
@@ -257,21 +257,21 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-2 whitespace-nowrap text-center font-mono text-black text-sm">
+                <td className="px-1 py-1 text-center font-mono text-black text-xs w-16">
                   {stock.price ? parseFloat(stock.price).toFixed(2) : '-'}
                 </td>
-                <td className="px-4 py-2 whitespace-nowrap text-center font-mono text-black text-sm">
+                <td className="px-1 py-1 text-center font-mono text-black text-xs w-20">
                   {formatVolume(stock.volume)}
                 </td>
-                <td className="px-4 py-2 whitespace-nowrap text-center font-mono">
-                  <span className="text-cyan-500 font-bold text-sm">
+                <td className="px-1 py-1 text-center font-mono w-16">
+                  <span className="text-cyan-500 font-bold text-xs">
                     {formatFloat(stock.float)}
                   </span>
                 </td>
-                <td className="px-4 py-2 whitespace-nowrap text-center font-mono text-black text-sm">
+                <td className="px-1 py-1 text-center font-mono text-black text-xs w-20">
                   {stock.relativeVolume ? `${parseFloat(stock.relativeVolume).toFixed(0)}%` : '-'}
                 </td>
-                <td className="px-4 py-2 whitespace-nowrap text-center font-mono text-black text-sm">
+                <td className="px-1 py-1 text-center font-mono text-black text-xs w-20">
                   {stock.relativeVolumeMin ? `${parseFloat(stock.relativeVolumeMin).toFixed(0)}%` : '-'}
                 </td>
               </tr>
