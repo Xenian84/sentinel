@@ -553,10 +553,22 @@ async function fetchStockNews(symbol: string): Promise<void> {
         const description = article.description?.toLowerCase() || '';
         const symbolLower = symbol.toLowerCase();
         
-        // Check if article is specifically about this stock (not just mentioned)
-        const isStockSpecific = 
-          title.includes(symbolLower) || 
-          description.includes(symbolLower);
+        // Company name mapping for better filtering
+        const companyNames: Record<string, string[]> = {
+          'lulu': ['lululemon'],
+          'urgn': ['urogen', 'uro'],
+          'npwr': ['net power', 'netpower'],
+          'zbai': ['zbai']
+        };
+        
+        const companyTerms = companyNames[symbolLower] || [];
+        
+        // Check if article is specifically about this stock
+        const titleMentionsStock = title.includes(symbolLower) || companyTerms.some(term => title.includes(term));
+        const descriptionMentionsStock = description.includes(symbolLower) || companyTerms.some(term => description.includes(term));
+        
+        // Articles that start with the company name are highly relevant
+        const startsWithCompany = title.startsWith(symbolLower) || companyTerms.some(term => title.startsWith(term));
         
         // Skip general market news that only mentions the stock tangentially
         const isGeneralMarket = 
@@ -564,11 +576,15 @@ async function fetchStockNews(symbol: string): Promise<void> {
           title.includes('market') && title.includes('rebounds') ||
           title.includes('jobs numbers') ||
           title.includes('trump') ||
-          title.includes('tesla') && !title.includes(symbolLower) ||
+          title.includes('tesla') && !titleMentionsStock ||
           title.includes('why on holdings') ||
-          (title.includes('stock') && !title.includes(symbolLower) && title.length > 50);
+          title.includes('feud softens') ||
+          (title.includes('stock') && title.split(' ').length > 8 && !titleMentionsStock);
         
-        if (isStockSpecific && !isGeneralMarket) {
+        // Only include if it's genuinely about the stock and not general market news
+        const isStockSpecific = (titleMentionsStock || descriptionMentionsStock) && !isGeneralMarket;
+        
+        if (isStockSpecific) {
           const newsData = {
             symbol,
             title: article.title,
