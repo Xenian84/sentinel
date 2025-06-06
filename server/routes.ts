@@ -127,6 +127,28 @@ async function fetchTopGappers(): Promise<void> {
           const estimatedFloat = volume * (Math.random() * 15 + 5); // 5-20x volume multiplier
           const relativeVolumeRatio = prevDay.v ? (volume / prevDay.v) : 1;
           
+          // Check for real news using Polygon API
+          let hasRealNews = false;
+          try {
+            const newsData = await fetchFromPolygon(`/v2/reference/news?ticker=${ticker}&limit=5&published_utc.gte=${new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]}`);
+            if (newsData.status === "OK" && newsData.results && newsData.results.length > 0) {
+              hasRealNews = true;
+              // Store news in database
+              for (const article of newsData.results.slice(0, 3)) {
+                await storage.addStockNews({
+                  symbol: ticker,
+                  title: article.title,
+                  summary: article.description || null,
+                  publishedAt: new Date(article.published_utc),
+                  url: article.article_url || null,
+                });
+              }
+            }
+          } catch (newsError) {
+            // If news fetch fails, continue without news data
+            console.log(`Could not fetch news for ${ticker}`);
+          }
+          
           const stockData = {
             symbol: ticker,
             name: null,
@@ -136,7 +158,7 @@ async function fetchTopGappers(): Promise<void> {
             gapPercentage: gapPercentage.toFixed(2),
             relativeVolume: (relativeVolumeRatio * 100).toFixed(2),
             relativeVolumeMin: (relativeVolumeRatio * Math.random() * 1000 + 100).toFixed(0),
-            hasNews: Math.random() > 0.6,
+            hasNews: hasRealNews,
           };
           
           await storage.upsertStock(stockData);
