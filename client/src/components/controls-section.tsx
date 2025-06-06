@@ -4,10 +4,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ControlsSectionProps {
-  autoRefresh: boolean;
-  setAutoRefresh: (value: boolean) => void;
-  refreshInterval: number;
-  setRefreshInterval: (value: number) => void;
   isConnected: boolean;
   totalGappers: number;
   positiveGappers: number;
@@ -16,10 +12,6 @@ interface ControlsSectionProps {
 }
 
 export default function ControlsSection({
-  autoRefresh,
-  setAutoRefresh,
-  refreshInterval,
-  setRefreshInterval,
   isConnected,
   totalGappers,
   positiveGappers,
@@ -28,41 +20,23 @@ export default function ControlsSection({
 }: ControlsSectionProps) {
   return (
     <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* Auto-refresh Control */}
+      {/* Real-time Connection Status */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Auto-Refresh</CardTitle>
+          <CardTitle className="text-lg">Real-time Updates</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center space-x-2">
-            <Checkbox
-              id="auto-refresh"
-              checked={autoRefresh}
-              onCheckedChange={setAutoRefresh}
-            />
-            <Label htmlFor="auto-refresh" className="text-sm">
-              Enable auto-refresh
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+            <Label className="text-sm">
+              {isConnected ? 'WebSocket Connected' : 'WebSocket Disconnected'}
             </Label>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="refresh-interval" className="text-sm">
-              Refresh Interval
+            <Label className="text-sm">
+              Data updates automatically every ~10 seconds
             </Label>
-            <Select 
-              value={refreshInterval.toString()} 
-              onValueChange={(value) => setRefreshInterval(parseInt(value))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">Every 5 seconds</SelectItem>
-                <SelectItem value="10">Every 10 seconds</SelectItem>
-                <SelectItem value="30">Every 30 seconds</SelectItem>
-                <SelectItem value="60">Every minute</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>

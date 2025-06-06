@@ -32,8 +32,7 @@ interface StockGapper {
 export default function StockScanner() {
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "positive" | "negative">("all");
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(10);
+  // Auto-refresh removed - using WebSocket exclusively
   const [lastUpdate, setLastUpdate] = useState<string>("");
   const [currentReport, setCurrentReport] = useState<string>("moys-top-gappers");
   const [currentEndpoint, setCurrentEndpoint] = useState<string>("/api/stocks/gappers?filter=moys");
@@ -61,12 +60,29 @@ export default function StockScanner() {
     }));
   }, [stocks]);
 
-  // Handle WebSocket updates for real-time data (only for default gappers view)
+  // Handle WebSocket updates for real-time data
   useEffect(() => {
-    if (lastMessage?.type === 'stocks_update' && currentReport === 'moys-top-gappers' && currentEndpoint.includes('filter=moys')) {
-      // Only apply WebSocket updates for the main Moys Top Gappers view
-      setStocks(lastMessage.data || []);
-      setIsLoading(false);
+    if (lastMessage?.type === 'stocks_update') {
+      // For Moys Top Gappers, use WebSocket data directly
+      if (currentReport === 'moys-top-gappers' && currentEndpoint.includes('filter=moys')) {
+        setStocks(lastMessage.data || []);
+        setIsLoading(false);
+      } else {
+        // For other reports, refresh the specific report data when base data updates
+        fetch(currentEndpoint)
+          .then(res => res.json())
+          .then(data => {
+            setStocks(data);
+            setLastUpdate(new Date().toLocaleTimeString('en-US', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              second: '2-digit',
+              timeZone: 'America/New_York',
+              hour12: true
+            }));
+          })
+          .catch(error => console.error("Failed to refresh report data:", error));
+      }
     }
   }, [lastMessage, currentReport, currentEndpoint]);
 
@@ -86,29 +102,8 @@ export default function StockScanner() {
     }
   }, [isConnected, currentEndpoint]);
 
-  // Auto-refresh functionality for current report
-  useEffect(() => {
-    if (!autoRefresh) return;
-    
-    const interval = setInterval(async () => {
-      try {
-        const response = await fetch(currentEndpoint);
-        const data = await response.json();
-        setStocks(data);
-        setLastUpdate(new Date().toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          second: '2-digit',
-          timeZone: 'America/New_York',
-          hour12: true
-        }));
-      } catch (error) {
-        console.error("Auto-refresh failed:", error);
-      }
-    }, refreshInterval * 1000);
-
-    return () => clearInterval(interval);
-  }, [autoRefresh, refreshInterval, currentEndpoint]);
+  // Auto-refresh is disabled - we use WebSocket for real-time updates
+  // Manual refresh is available as backup for specific reports
 
   const handleRefresh = async () => {
     try {
@@ -336,10 +331,6 @@ export default function StockScanner() {
 
         {/* Controls Section */}
         <ControlsSection
-          autoRefresh={autoRefresh}
-          setAutoRefresh={setAutoRefresh}
-          refreshInterval={refreshInterval}
-          setRefreshInterval={setRefreshInterval}
           isConnected={isConnected}
           totalGappers={stocks.length}
           positiveGappers={positiveGappers}
