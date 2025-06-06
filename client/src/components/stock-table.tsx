@@ -220,7 +220,7 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                     <div className="flex flex-wrap gap-1">
                       {conditions.volume5x && (
                         <span className="bg-purple-500 text-white text-xs px-1 py-0.5 rounded font-bold" title="5x Relative Volume">
-                          Volume
+                          V
                         </span>
                       )}
                       {conditions.up10Percent && (
@@ -230,17 +230,17 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                       )}
                       {conditions.hasNewsEvent && (
                         <span className="bg-fuchsia-500 text-white text-xs px-1 py-0.5 rounded font-bold" title="News Event moving stock higher">
-                          News
+                          N
                         </span>
                       )}
                       {conditions.priceRange && (
                         <span className="bg-red-500 text-white text-xs px-1 py-0.5 rounded font-bold" title="Price range $1.00 - $20.00">
-                          Price
+                          P
                         </span>
                       )}
                       {conditions.lowFloat && (
                         <span className="bg-yellow-600 text-white text-xs px-1 py-0.5 rounded font-bold" title="Less than 10M shares available">
-                          Supply
+                          S
                         </span>
                       )}
                     </div>
