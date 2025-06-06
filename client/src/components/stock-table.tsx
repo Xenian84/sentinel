@@ -252,11 +252,7 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                           %
                         </span>
                       )}
-                      {conditions.hasNewsEvent && (
-                        <span className="bg-fuchsia-500 text-white text-xs px-1 py-0.5 rounded font-bold" title="News Event moving stock higher">
-                          N
-                        </span>
-                      )}
+
                       {conditions.priceRange && (
                         <span className="bg-red-500 text-white text-xs px-1 py-0.5 rounded font-bold" title="Price range $1.00 - $20.00">
                           P

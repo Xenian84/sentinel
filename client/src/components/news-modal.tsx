@@ -20,7 +20,7 @@ interface NewsModalProps {
 
 export default function NewsModal({ symbol, isOpen, onClose }: NewsModalProps) {
   const { data: news = [], isLoading, refetch } = useQuery<StockNews[]>({
-    queryKey: ["/api/stocks", symbol, "news"],
+    queryKey: [`/api/stocks/${symbol}/news`],
     enabled: !!symbol && isOpen,
   });
 
