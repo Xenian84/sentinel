@@ -244,12 +244,15 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                         </span>
                       )}
                     </div>
-                    {(stock.hasNews || stock.newsCount) && (
+                    {(stock.hasNews || (stock.newsCount && stock.newsCount > 0)) && (
                       <div className="flex items-center space-x-1">
                         <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-red-500"></div>
                         <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold animate-pulse">
                           NEWS
                         </span>
+                        {stock.newsCount && stock.newsCount > 0 && (
+                          <span className="bg-gray-600 text-white text-xs px-1 rounded ml-1">{stock.newsCount}</span>
+                        )}
                       </div>
                     )}
                   </div>
