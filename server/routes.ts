@@ -687,9 +687,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stocks = await storage.getAllStocks();
       const allNews = [];
       
-      for (const stock of stocks.slice(0, 20)) { // Limit to top 20 stocks to avoid performance issues
+      // Get news from all stocks, check actual news data instead of flags
+      for (const stock of stocks) {
         const stockNews = await storage.getStockNews(stock.symbol);
-        allNews.push(...stockNews);
+        if (stockNews.length > 0) {
+          allNews.push(...stockNews);
+        }
       }
       
       // Sort by publication date (newest first)
