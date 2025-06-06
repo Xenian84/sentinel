@@ -668,6 +668,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clear all news data
+  app.post("/api/news/clear", async (req, res) => {
+    try {
+      // Reset news storage to clear duplicates
+      (storage as any).stockNews.clear();
+      (storage as any).currentNewsId = 1;
+      
+      // Reset hasNews flags on stocks
+      const stocks = await storage.getAllStocks();
+      for (const stock of stocks) {
+        const stockData = (storage as any).stocks.get(stock.symbol);
+        if (stockData) {
+          stockData.hasNews = false;
+          stockData.newsCount = 0;
+        }
+      }
+      
+      res.json({ message: "All news data cleared successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to clear news data" });
+    }
+  });
+
   // Refresh stock data
   app.post("/api/stocks/refresh", async (req, res) => {
     try {

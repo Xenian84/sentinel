@@ -71,12 +71,24 @@ export class MemStorage implements IStorage {
   }
 
   async addStockNews(newsData: InsertStockNews): Promise<StockNews> {
+    const existingNews = this.stockNews.get(newsData.symbol) || [];
+    
+    // Check for duplicates by title and URL
+    const isDuplicate = existingNews.some(existing => 
+      existing.title === newsData.title && existing.url === newsData.url
+    );
+    
+    if (isDuplicate) {
+      return existingNews.find(existing => 
+        existing.title === newsData.title && existing.url === newsData.url
+      )!;
+    }
+    
     const news: StockNews = {
       id: this.currentNewsId++,
       ...newsData,
     };
     
-    const existingNews = this.stockNews.get(newsData.symbol) || [];
     existingNews.push(news);
     this.stockNews.set(newsData.symbol, existingNews);
     
