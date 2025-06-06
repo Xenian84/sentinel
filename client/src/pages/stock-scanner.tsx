@@ -63,28 +63,26 @@ export default function StockScanner() {
   // Handle WebSocket updates for real-time data
   useEffect(() => {
     if (lastMessage?.type === 'stocks_update') {
-      // For Moys Top Gappers, use WebSocket data directly
-      if (currentReport === 'moys-top-gappers' && currentEndpoint.includes('filter=moys')) {
-        setStocks(lastMessage.data || []);
-        setIsLoading(false);
-      } else {
-        // For other reports, refresh the specific report data when base data updates
-        fetch(currentEndpoint)
-          .then(res => res.json())
-          .then(data => {
-            setStocks(data);
-            setLastUpdate(new Date().toLocaleTimeString('en-US', { 
-              hour: '2-digit', 
-              minute: '2-digit',
-              second: '2-digit',
-              timeZone: 'America/New_York',
-              hour12: true
-            }));
-          })
-          .catch(error => console.error("Failed to refresh report data:", error));
-      }
+      // Always refresh the current report's specific endpoint to maintain filtering
+      fetch(currentEndpoint)
+        .then(res => res.json())
+        .then(data => {
+          setStocks(data);
+          setIsLoading(false);
+          setLastUpdate(new Date().toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit',
+            timeZone: 'America/New_York',
+            hour12: true
+          }));
+        })
+        .catch(error => {
+          console.error("Failed to refresh report data:", error);
+          setIsLoading(false);
+        });
     }
-  }, [lastMessage, currentReport, currentEndpoint]);
+  }, [lastMessage, currentEndpoint]);
 
   // Load initial data when connected
   useEffect(() => {
