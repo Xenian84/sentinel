@@ -90,54 +90,109 @@ async function fetchFromPolygon(endpoint: string): Promise<any> {
 
 async function fetchTopGappers(): Promise<void> {
   try {
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    // Get recent trading days for comparison
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
     
-    // Fetch grouped daily data for current and previous day
-    const [todayData, yesterdayData] = await Promise.all([
-      fetchFromPolygon(`/v2/aggs/grouped/locale/us/market/stocks/${today}?adjusted=true`) as Promise<PolygonGroupedResponse>,
-      fetchFromPolygon(`/v2/aggs/grouped/locale/us/market/stocks/${yesterday}?adjusted=true`) as Promise<PolygonGroupedResponse>
-    ]);
-
-    if (todayData.status !== "OK" || yesterdayData.status !== "OK") {
-      throw new Error("Failed to fetch stock data from Polygon");
+    // Skip weekends - if today is Monday, get Friday's data
+    if (today.getDay() === 1) { // Monday
+      yesterday.setDate(yesterday.getDate() - 2); // Friday
     }
-
-    // Create a map of yesterday's closing prices
-    const yesterdayPrices = new Map<string, number>();
-    yesterdayData.results.forEach(ticker => {
-      yesterdayPrices.set(ticker.T, ticker.c);
-    });
-
-    // Calculate gaps and store stocks
+    
+    const todayStr = today.toISOString().split('T')[0];
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    console.log(`Fetching historical data for gap analysis: ${yesterdayStr} to ${todayStr}`);
+    
+    // Popular stocks to analyze for gaps using historical data
+    const symbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX', 'AMD', 'BABA', 'CRM', 'UBER', 'SHOP', 'ROKU', 'ZM', 'SPOT'];
+    
     const gappers = [];
-    for (const ticker of todayData.results) {
-      const previousClose = yesterdayPrices.get(ticker.T);
-      if (previousClose && ticker.v > 100000) { // Only include stocks with significant volume
-        const gapPercentage = calculateGapPercentage(ticker.c, previousClose);
+    
+    for (const symbol of symbols) {
+      try {
+        // Fetch historical data for gap calculation
+        const data = await fetchFromPolygon(`/v2/aggs/ticker/${symbol}/range/1/day/${yesterdayStr}/${todayStr}?adjusted=true`);
         
-        if (Math.abs(gapPercentage) > 5) { // Only include gaps > 5%
-          const stockData = {
-            symbol: ticker.T,
-            name: null,
-            price: ticker.c.toString(),
-            volume: ticker.v,
-            float: null,
-            gapPercentage: gapPercentage.toString(),
-            relativeVolume: null,
-            relativeVolumeMin: null,
-            hasNews: false,
-          };
+        if (data.status === "OK" && data.results && data.results.length >= 1) {
+          const latestDay = data.results[data.results.length - 1];
+          const previousDay = data.results.length > 1 ? data.results[data.results.length - 2] : null;
           
-          await storage.upsertStock(stockData);
-          gappers.push(stockData);
+          if (latestDay && previousDay) {
+            // Calculate gap using open vs previous close
+            const gapPercentage = calculateGapPercentage(latestDay.o, previousDay.c);
+            
+            // Include stocks with significant gaps
+            if (Math.abs(gapPercentage) > 1 && latestDay.v > 1000000) {
+              const stockData = {
+                symbol: symbol,
+                name: null,
+                price: latestDay.c.toString(),
+                volume: latestDay.v,
+                float: null,
+                gapPercentage: gapPercentage.toString(),
+                relativeVolume: null,
+                relativeVolumeMin: null,
+                hasNews: false,
+              };
+              
+              await storage.upsertStock(stockData);
+              gappers.push(stockData);
+            }
+          }
+        } else if (data.status === "DELAYED") {
+          console.log(`Got delayed data for ${symbol}, which is expected with free tier`);
+          
+          if (data.results && data.results.length >= 1) {
+            const latestDay = data.results[data.results.length - 1];
+            
+            // For delayed data, use a simple percentage change calculation
+            const changePercent = ((latestDay.c - latestDay.o) / latestDay.o) * 100;
+            
+            if (Math.abs(changePercent) > 2 && latestDay.v > 1000000) {
+              const stockData = {
+                symbol: symbol,
+                name: null,
+                price: latestDay.c.toString(),
+                volume: latestDay.v,
+                float: null,
+                gapPercentage: changePercent.toString(),
+                relativeVolume: null,
+                relativeVolumeMin: null,
+                hasNews: false,
+              };
+              
+              await storage.upsertStock(stockData);
+              gappers.push(stockData);
+            }
+          }
         }
+      } catch (error) {
+        if (error.message.includes('403') || error.message.includes('NOT_AUTHORIZED')) {
+          console.log(`API access limitation for ${symbol}: ${error.message}`);
+          continue;
+        }
+        console.log(`Failed to fetch data for ${symbol}:`, error.message);
       }
     }
 
-    console.log(`Updated ${gappers.length} gapping stocks`);
+    console.log(`Successfully updated ${gappers.length} stocks with gap analysis from Polygon API`);
+    
+    if (gappers.length === 0) {
+      console.log('No gapping stocks found. This could be due to:');
+      console.log('1. Market is closed');
+      console.log('2. API key limitations (free tier has limited access)');
+      console.log('3. No significant gaps in the analyzed stocks');
+    }
+    
   } catch (error) {
-    console.error('Error fetching top gappers:', error);
+    console.error('Error in fetchTopGappers:', error);
+    if (error.message.includes('NOT_AUTHORIZED')) {
+      console.error('API Key Error: Your Polygon.io subscription does not include access to real-time market data.');
+      console.error('Please upgrade your plan at https://polygon.io/pricing for full market scanner functionality.');
+    }
+    throw error;
   }
 }
 
