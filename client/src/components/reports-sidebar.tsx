@@ -38,12 +38,12 @@ export default function ReportsSidebar({ onReportSelect, currentReport }: Report
           icon: TrendingUp
         },
         {
-          id: "ross-top-gappers",
-          name: "Ross's Top Gappers",
-          description: "High probability gap trades using Ross Cameron's methodology",
-          endpoint: "/api/reports/ross-gappers",
+          id: "moys-top-gappers",
+          name: "Moys Top Gappers",
+          description: "Original top gapping stocks scanner with comprehensive market data",
+          endpoint: "/api/stocks/gappers",
           icon: TrendingUp,
-          isActive: currentReport === "ross-top-gappers"
+          isActive: currentReport === "moys-top-gappers"
         },
         {
           id: "reversal",
