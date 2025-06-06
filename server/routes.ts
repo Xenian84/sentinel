@@ -123,8 +123,6 @@ async function fetchTopGappers(): Promise<void> {
         
         // Only include stocks with significant gaps (>3% change)
         if (Math.abs(gapPercentage) > 3) {
-          // Generate realistic float data based on volume patterns
-          const estimatedFloat = volume * (Math.random() * 15 + 5); // 5-20x volume multiplier
           const relativeVolumeRatio = prevDay.v ? (volume / prevDay.v) : 1;
           
           // Check for real news using Polygon API
@@ -151,13 +149,13 @@ async function fetchTopGappers(): Promise<void> {
           
           const stockData = {
             symbol: ticker,
-            name: null,
+            name: null, // Only store if we have authentic data
             price: currentPrice.toString(),
             volume: volume,
-            float: estimatedFloat,
+            float: null, // Only store authentic float data when available
             gapPercentage: gapPercentage.toFixed(2),
             relativeVolume: (relativeVolumeRatio * 100).toFixed(2),
-            relativeVolumeMin: (relativeVolumeRatio * Math.random() * 1000 + 100).toFixed(0),
+            relativeVolumeMin: null, // Only store authentic data
             hasNews: hasRealNews,
           };
           
