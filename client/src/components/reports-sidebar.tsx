@@ -31,19 +31,19 @@ export default function ReportsSidebar({ onReportSelect, currentReport }: Report
       title: "All Reports",
       reports: [
         {
-          id: "small-cap-high-momentum",
-          name: "Small Cap - High of Day Momentum",
-          description: "Small cap stocks with high momentum",
-          endpoint: "/api/reports/small-cap-momentum",
-          icon: TrendingUp
-        },
-        {
           id: "moys-top-gappers",
           name: "Moys Top Gappers",
           description: "Original top gapping stocks scanner with comprehensive market data",
           endpoint: "/api/stocks/gappers",
           icon: TrendingUp,
           isActive: currentReport === "moys-top-gappers"
+        },
+        {
+          id: "small-cap-high-momentum",
+          name: "Small Cap - High of Day Momentum",
+          description: "Small cap stocks with high momentum",
+          endpoint: "/api/reports/small-cap-momentum",
+          icon: TrendingUp
         },
         {
           id: "reversal",
