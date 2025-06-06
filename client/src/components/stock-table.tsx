@@ -207,15 +207,15 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                 <td className="px-4 py-2 whitespace-nowrap">
                   <div className="flex items-center space-x-1">
                     <a 
-                      href={`https://www.tradingview.com/chart/?symbol=${stock.symbol}`}
+                      href={`https://www.webull.com/quote/${stock.symbol}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-sm transition-colors"
-                      title={`View ${stock.symbol} chart on TradingView`}
+                      title={`View ${stock.symbol} chart on Webull`}
                     >
                       {stock.symbol}
                     </a>
-                    {stock.newsCount > 0 && (
+                    {(stock.newsCount ?? 0) > 0 && (
                       <span className="bg-gray-600 text-white text-xs px-1 rounded ml-1">{stock.newsCount}</span>
                     )}
                     {/* Proprietary scanning condition indicators */}
