@@ -1,0 +1,250 @@
+Stock Scanner Complete Deployment Commands
+==========================================
+
+1. INITIAL SERVER SETUP
+-----------------------
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install required packages
+sudo apt install -y curl wget git nginx certbot python3-certbot-nginx build-essential python3 python3-pip ufw
+
+# Install Node.js 20
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+sudo apt install -y nodejs
+
+# Install Python dependencies
+sudo pip3 install requests beautifulsoup4 yfinance
+
+2. APPLICATION SETUP
+--------------------
+# Create application user
+sudo useradd --system --shell /bin/bash --home-dir /opt/stock-scanner --create-home stockscanner
+
+# Create application directory
+sudo mkdir -p /opt/stock-scanner/app
+sudo chown -R stockscanner:stockscanner /opt/stock-scanner
+
+# Copy your application files to /opt/stock-scanner/app
+# (Upload all your project files here)
+
+3. ENVIRONMENT CONFIGURATION
+-----------------------------
+# Create environment file
+sudo nano /opt/stock-scanner/app/.env
+
+# Add this content to .env file:
+NODE_ENV=production
+PORT=5000
+HOST=0.0.0.0
+POLYGON_API_KEY=your_actual_polygon_api_key_here
+SESSION_SECRET=your_random_session_secret_here
+API_RATE_LIMIT_MAX=5000
+API_RATE_LIMIT_WINDOW=3600000
+PYTHON_PATH=/usr/bin/python3
+PIP_PATH=/usr/bin/pip3
+
+# Set permissions
+sudo chown stockscanner:stockscanner /opt/stock-scanner/app/.env
+sudo chmod 600 /opt/stock-scanner/app/.env
+
+4. INSTALL DEPENDENCIES
+------------------------
+cd /opt/stock-scanner/app
+sudo -u stockscanner npm install --production
+sudo -u stockscanner npm run build
+
+5. SYSTEMD SERVICE SETUP
+-------------------------
+# Create service file
+sudo nano /etc/systemd/system/stock-scanner.service
+
+# Add this content:
+[Unit]
+Description=Stock Scanner Application
+After=network.target
+
+[Service]
+Type=simple
+User=stockscanner
+WorkingDirectory=/opt/stock-scanner/app
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/stock-scanner/app/.env
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=stock-scanner
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/stock-scanner
+
+[Install]
+WantedBy=multi-user.target
+
+6. NGINX CONFIGURATION
+-----------------------
+# Create Nginx config
+sudo nano /etc/nginx/sites-available/stock-scanner
+
+# Add this content (replace your-domain.com):
+server {
+    listen 80;
+    server_name your-domain.com www.your-domain.com;
+
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
+
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 86400;
+    }
+
+    location /ws {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /assets/ {
+        alias /opt/stock-scanner/app/dist/assets/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+
+# Enable site
+sudo ln -sf /etc/nginx/sites-available/stock-scanner /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+
+# Test Nginx config
+sudo nginx -t
+
+7. FIREWALL SETUP
+------------------
+sudo ufw allow ssh
+sudo ufw allow 'Nginx Full'
+sudo ufw --force enable
+
+8. START SERVICES
+------------------
+sudo systemctl daemon-reload
+sudo systemctl enable stock-scanner
+sudo systemctl enable nginx
+sudo systemctl start stock-scanner
+sudo systemctl start nginx
+
+9. SSL CERTIFICATE (Replace your-domain.com)
+---------------------------------------------
+sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+
+10. VERIFICATION COMMANDS
+--------------------------
+# Check service status
+sudo systemctl status stock-scanner
+
+# View application logs
+sudo journalctl -u stock-scanner -f
+
+# Check Nginx status
+sudo systemctl status nginx
+
+# Test application
+curl http://localhost:5000/api/status
+
+11. PACKAGE.JSON SCRIPTS NEEDED
+--------------------------------
+Make sure your package.json includes:
+{
+  "scripts": {
+    "start": "NODE_ENV=production tsx server/index.ts",
+    "build": "vite build",
+    "dev": "npm run dev"
+  }
+}
+
+12. REQUIRED ENVIRONMENT SECRETS
+---------------------------------
+POLYGON_API_KEY - Get from https://polygon.io/
+- Sign up for account
+- Get API key from dashboard
+- Add to .env file
+
+13. MONITORING AND MAINTENANCE
+-------------------------------
+# View real-time logs
+sudo journalctl -u stock-scanner -f
+
+# Restart service
+sudo systemctl restart stock-scanner
+
+# Update application (create update script)
+sudo nano /opt/stock-scanner/update.sh
+
+# Add update script content:
+#!/bin/bash
+set -e
+cd /opt/stock-scanner/app
+sudo systemctl stop stock-scanner
+sudo -u stockscanner git pull origin main
+sudo -u stockscanner npm install --production
+sudo -u stockscanner npm run build
+sudo systemctl start stock-scanner
+echo "Update complete!"
+
+# Make executable
+sudo chmod +x /opt/stock-scanner/update.sh
+
+14. TROUBLESHOOTING
+-------------------
+# If service fails to start:
+sudo systemctl status stock-scanner
+sudo journalctl -u stock-scanner --no-pager
+
+# Check port availability:
+sudo netstat -tlnp | grep :5000
+
+# Test Nginx config:
+sudo nginx -t
+
+# Reload Nginx:
+sudo systemctl reload nginx
+
+15. FINAL VERIFICATION
+----------------------
+# After deployment, verify these URLs work:
+http://your-domain.com - Main application
+http://your-domain.com/api/status - API status
+http://your-domain.com/api/stocks/gappers - Stock data
+
+Your stock scanner will be available at: https://your-domain.com
+
+IMPORTANT NOTES:
+- Replace "your-domain.com" with your actual domain
+- Add your real Polygon.io API key to .env file
+- Upload all project files to /opt/stock-scanner/app
+- Ensure all dependencies are installed before starting services
