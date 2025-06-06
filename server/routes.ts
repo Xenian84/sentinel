@@ -127,12 +127,16 @@ async function fetchTopGappers(): Promise<void> {
           
           // Check for real news using Polygon API
           let hasRealNews = false;
+          let newsCount = 0;
           try {
-            const newsData = await fetchFromPolygon(`/v2/reference/news?ticker=${ticker}&limit=5&published_utc.gte=${new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]}`);
+            const newsData = await fetchFromPolygon(`/v2/reference/news?ticker=${ticker}&limit=10&published_utc.gte=${new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]}`);
             if (newsData.status === "OK" && newsData.results && newsData.results.length > 0) {
               hasRealNews = true;
+              newsCount = newsData.results.length;
+              console.log(`Found ${newsCount} news articles for ${ticker}`);
+              
               // Store news in database
-              for (const article of newsData.results.slice(0, 3)) {
+              for (const article of newsData.results.slice(0, 5)) {
                 await storage.addStockNews({
                   symbol: ticker,
                   title: article.title,
@@ -144,7 +148,7 @@ async function fetchTopGappers(): Promise<void> {
             }
           } catch (newsError) {
             // If news fetch fails, continue without news data
-            console.log(`Could not fetch news for ${ticker}`);
+            console.log(`Could not fetch news for ${ticker}: ${newsError instanceof Error ? newsError.message : 'Unknown error'}`);
           }
           
           const stockData = {
@@ -157,6 +161,7 @@ async function fetchTopGappers(): Promise<void> {
             relativeVolume: (relativeVolumeRatio * 100).toFixed(2),
             relativeVolumeMin: null, // Only store authentic data
             hasNews: hasRealNews,
+            newsCount: newsCount,
           };
           
           await storage.upsertStock(stockData);

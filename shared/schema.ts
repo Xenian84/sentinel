@@ -19,6 +19,7 @@ export const stocks = pgTable("stocks", {
   relativeVolume: decimal("relative_volume", { precision: 10, scale: 2 }),
   relativeVolumeMin: decimal("relative_volume_min", { precision: 10, scale: 2 }),
   hasNews: boolean("has_news").default(false),
+  newsCount: integer("news_count").default(0),
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
