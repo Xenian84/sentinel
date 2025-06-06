@@ -156,7 +156,7 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
             <SortHeader column="volume">Volume</SortHeader>
             <SortHeader column="float">Float</SortHeader>
             <SortHeader column="relativeVolume">Relative Volume(Daily Rate)</SortHeader>
-            <SortHeader column="relativeVolumeMin">Relative Volume(min %)</SortHeader>
+            <SortHeader column="relativeVolumeMin">Relative Volume(Min %)</SortHeader>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
