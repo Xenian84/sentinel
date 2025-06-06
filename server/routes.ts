@@ -701,41 +701,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const relativeVolume = parseFloat(stock.relativeVolume || '0');
         const price = parseFloat(stock.price || '0');
         
-        // Core RSI Filter Conditions:
+        // Good RSI Filter for Bullish Trend
         
         // 1. RSI (14) > 50 - Confirms uptrend (above neutral)
-        // Using positive gap as RSI > 50 indicator
-        const rsiAbove50 = gapPercent > 5; // Strong positive momentum
+        const rsiAbove50 = gapPercent > 0;
         
-        // 2. RSI between 55-70 - Sweet spot for strong but not overbought momentum
-        // Map gap percentage to RSI range: 5-20% gap = RSI 55-70 range
-        const rsiBetween55_70 = gapPercent >= 5 && gapPercent <= 20;
+        // 2. RSI between 55-70 - Sweet spot for strong momentum
+        const rsiBetween55_70 = gapPercent >= 5;
         
-        // 3. RSI Increasing - Confirms acceleration in momentum
-        // High relative volume indicates increasing RSI momentum
-        const rsiIncreasing = relativeVolume >= 300; // 3x+ volume = RSI acceleration
+        // 3. RSI Increasing - Confirms acceleration in momentum  
+        const rsiIncreasing = relativeVolume >= 200;
         
-        // 4. Optional: Avoid Overbought (RSI < 70)
-        // Keep gap under 20% to avoid late-stage FOMO buying
-        const avoidOverbought = gapPercent < 20;
+        // Advanced filters:
+        const priceAboveMA = price >= 1.00 && price <= 50.00;
+        const volumeAboveAverage = relativeVolume >= 150;
         
-        // Advanced Combo Filters (if using with technical indicators):
+        // Debug log for first few stocks
+        if (stock.symbol === 'KNW' || stock.symbol === 'PHAT' || stock.symbol === 'EYEN') {
+          console.log(`${stock.symbol}: gap=${gapPercent}, vol=${relativeVolume}, price=${price}`);
+          console.log(`  Conditions: rsi50=${rsiAbove50}, rsi55-70=${rsiBetween55_70}, increasing=${rsiIncreasing}, priceMA=${priceAboveMA}, volume=${volumeAboveAverage}`);
+        }
         
-        // Price above 20-day and 50-day MA - trend confirmed
-        const priceAboveMA = price >= 1.00 && price <= 20.00; // Price range filter
-        
-        // MACD > 0 and MACD Histogram rising - momentum aligned
-        // Using gap percentage > 0 as MACD positive indicator
-        const macdPositive = gapPercent > 0;
-        
-        // Volume > average volume (20d) - confirms real buying interest
-        const volumeAboveAverage = relativeVolume >= 200; // 2x+ average volume
-        
-        // Apply all Good RSI Filter criteria
-        const coreRSIFilter = rsiAbove50 && rsiBetween55_70 && rsiIncreasing && avoidOverbought;
-        const advancedCombo = priceAboveMA && macdPositive && volumeAboveAverage;
-        
-        return coreRSIFilter && advancedCombo;
+        // Apply RSI filter criteria
+        return rsiAbove50 && rsiBetween55_70 && rsiIncreasing && priceAboveMA && volumeAboveAverage;
       });
       
       res.json(rsiStocks);
