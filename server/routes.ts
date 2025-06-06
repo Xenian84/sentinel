@@ -497,8 +497,8 @@ async function fetchTopGappers(): Promise<void> {
     
     console.log(`Top gappers: ${sortedGappers.slice(0, 5).map(s => `${s.symbol} (${s.gapPercentage}%)`).join(', ')}`);
     
-    // Fetch float data more frequently since yfinance is reliable
-    const shouldFetchFloat = Math.random() < 0.6; // 60% chance per update cycle
+    // Fetch float and short data more frequently since yfinance is reliable
+    const shouldFetchFloat = Math.random() < 0.8; // 80% chance per update cycle
     
     if (shouldFetchFloat) {
       try {
