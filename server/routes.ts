@@ -507,10 +507,9 @@ async function fetchTopGappers(): Promise<void> {
         console.log(`Fetching float data for ${symbols.length} stocks...`);
         const floatData = await fetchFloatData(symbols);
         
-        // Fetch short interest data for top stocks (limit to avoid rate limits)
-        const topSymbols = symbols.slice(0, 10); // Top 10 stocks for short data
-        console.log(`Fetching short interest data for ${topSymbols.length} top stocks...`);
-        const shortData = await fetchShortData(topSymbols);
+        // Fetch short interest data for all stocks
+        console.log(`Fetching short interest data for ${symbols.length} stocks...`);
+        const shortData = await fetchShortData(symbols);
         
         // Update stocks with comprehensive data
         const updatedGappers = sortedGappers.map(stock => ({
