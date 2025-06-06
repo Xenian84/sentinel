@@ -35,8 +35,9 @@ export default function StockScanner() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(10);
   const [lastUpdate, setLastUpdate] = useState<string>("");
-  const [currentReport, setCurrentReport] = useState<string>("top-gappers");
-  const [currentEndpoint, setCurrentEndpoint] = useState<string>("/api/stocks/gappers");
+  const [currentReport, setCurrentReport] = useState<string>("moys-top-gappers");
+  const [currentEndpoint, setCurrentEndpoint] = useState<string>("/api/stocks/gappers?filter=moys");
+  const [currentReportName, setCurrentReportName] = useState<string>("Moys Top Gappers");
 
   const [stocks, setStocks] = useState<StockGapper[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,7 +72,7 @@ export default function StockScanner() {
   // Load initial data when connected
   useEffect(() => {
     if (isConnected && stocks.length === 0) {
-      fetch("/api/stocks/gappers")
+      fetch(currentEndpoint)
         .then(res => res.json())
         .then(data => {
           setStocks(data);
@@ -82,13 +83,41 @@ export default function StockScanner() {
           setIsLoading(false);
         });
     }
-  }, [isConnected]);
+  }, [isConnected, currentEndpoint]);
+
+  // Auto-refresh functionality for current report
+  useEffect(() => {
+    if (!autoRefresh) return;
+    
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(currentEndpoint);
+        const data = await response.json();
+        setStocks(data);
+        setLastUpdate(new Date().toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          second: '2-digit',
+          timeZone: 'America/New_York',
+          hour12: true
+        }));
+      } catch (error) {
+        console.error("Auto-refresh failed:", error);
+      }
+    }, refreshInterval * 1000);
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, refreshInterval, currentEndpoint]);
 
   const handleRefresh = async () => {
     try {
       setIsLoading(true);
-      await fetch("/api/stocks/refresh", { method: "POST" });
-      // Data will be updated via WebSocket automatically
+      // Refresh the current report data directly
+      const response = await fetch(currentEndpoint);
+      const data = await response.json();
+      setStocks(data);
+      setLastUpdate(new Date().toLocaleTimeString());
+      setIsLoading(false);
     } catch (error) {
       console.error("Failed to refresh data:", error);
       setIsLoading(false);
@@ -99,9 +128,32 @@ export default function StockScanner() {
     setSelectedStock(symbol);
   };
 
+  const getReportDisplayName = (reportId: string) => {
+    const reportNames: { [key: string]: string } = {
+      "moys-top-gappers": "Moys Top Gappers",
+      "small-cap-high-momentum": "Small Cap - High of Day Momentum",
+      "reversal": "Reversal",
+      "after-hours-gainers": "After Hours Top Gainers",
+      "continuation": "Continuation",
+      "recent-ipo": "Recent IPO Top Moving",
+      "top-gainers": "Top Gainers",
+      "top-losers": "Top Losers",
+      "top-rsi": "Top RSI Trend",
+      "top-relative-volume": "Top Relative Volume",
+      "top-volume-5min": "Top Volume 5 Minutes",
+      "large-cap-momentum": "Large Cap - High Of Day Momentum",
+      "large-cap-gappers": "Large Cap - Top Gappers",
+      "large-cap-earnings": "Large Cap - Earnings With Gap",
+      "penny-gappers": "Penny - Top Gappers",
+      "halt": "Halt"
+    };
+    return reportNames[reportId] || "Stock Scanner";
+  };
+
   const handleReportSelect = (reportId: string, endpoint: string) => {
     setCurrentReport(reportId);
     setCurrentEndpoint(endpoint);
+    setCurrentReportName(getReportDisplayName(reportId));
     setIsLoading(true);
     
     // Fetch new report data
@@ -109,6 +161,7 @@ export default function StockScanner() {
       .then(res => res.json())
       .then(data => {
         setStocks(data);
+        setLastUpdate(new Date().toLocaleTimeString());
         setIsLoading(false);
       })
       .catch(error => {
@@ -247,7 +300,7 @@ export default function StockScanner() {
           <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Top Gappers</h2>
+                <h2 className="text-xl font-semibold text-gray-900">{currentReportName}</h2>
                 <p className="text-sm text-gray-600 mt-1">
                   {getCurrentTimeRange()} (Last updated {lastUpdate} - 
                   <span className={`ml-1 ${isConnected ? 'text-financial-success' : 'text-red-500'}`}>
