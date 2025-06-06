@@ -15,6 +15,8 @@ interface StockGapper {
   hasNews: boolean;
   lastUpdated: Date | null;
   newsCount?: number;
+  shortInterest?: string | null;
+  shortRatio?: string | null;
 }
 
 interface StockTableProps {
@@ -164,6 +166,8 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
             <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-16">Relative Volume(Daily Rate)</th>
             <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-16">Relative Volume(min %)</th>
             <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-12">Gap(%)</th>
+            <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-16">Short Interest</th>
+            <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-12">Short Ratio</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -289,6 +293,12 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                   }`}>
                     {gapPercent.toFixed(1)}
                   </span>
+                </td>
+                <td className="px-1 py-1 text-center font-mono text-black text-xs w-16">
+                  {stock.shortInterest ? `${parseFloat(stock.shortInterest).toFixed(1)}%` : '-'}
+                </td>
+                <td className="px-1 py-1 text-center font-mono text-black text-xs w-12">
+                  {stock.shortRatio ? parseFloat(stock.shortRatio).toFixed(2) : '-'}
                 </td>
               </tr>
             );

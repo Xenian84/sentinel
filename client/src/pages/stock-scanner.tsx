@@ -27,6 +27,8 @@ interface StockGapper {
   hasNews: boolean;
   lastUpdated: Date | null;
   newsCount?: number;
+  shortInterest?: string | null;
+  shortRatio?: string | null;
 }
 
 export default function StockScanner() {

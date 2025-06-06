@@ -502,24 +502,32 @@ async function fetchTopGappers(): Promise<void> {
     
     if (shouldFetchFloat) {
       try {
-        // Fetch float data for all stocks to ensure complete coverage
+        // Fetch comprehensive data for all stocks
         const symbols = sortedGappers.map(stock => stock.symbol);
         console.log(`Fetching float data for ${symbols.length} stocks...`);
         const floatData = await fetchFloatData(symbols);
         
-        // Update stocks with float data
+        // Fetch short interest data for top stocks (limit to avoid rate limits)
+        const topSymbols = symbols.slice(0, 10); // Top 10 stocks for short data
+        console.log(`Fetching short interest data for ${topSymbols.length} top stocks...`);
+        const shortData = await fetchShortData(topSymbols);
+        
+        // Update stocks with comprehensive data
         const updatedGappers = sortedGappers.map(stock => ({
           ...stock,
-          float: floatData[stock.symbol] || stock.float || null // Keep existing float if fetch fails
+          float: floatData[stock.symbol] || stock.float || null,
+          shortInterest: shortData[stock.symbol]?.shortInterest || stock.shortInterest || null,
+          shortRatio: shortData[stock.symbol]?.shortRatio || stock.shortRatio || null
         }));
         
-        // Save updated stocks with float data
+        // Save updated stocks
         for (const stock of updatedGappers) {
           await storage.upsertStock(stock);
         }
         
         const validFloats = Object.values(floatData).filter(f => f !== null).length;
-        console.log(`Enhanced ${validFloats} stocks with Yahoo Finance float data`);
+        const validShorts = Object.values(shortData).filter(d => d.shortInterest !== null || d.shortRatio !== null).length;
+        console.log(`Enhanced ${validFloats} stocks with float data and ${validShorts} stocks with short interest data`);
         return updatedGappers;
       } catch (error) {
         console.error('Error fetching float data:', error);
