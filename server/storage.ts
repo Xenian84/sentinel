@@ -46,6 +46,7 @@ export class MemStorage implements IStorage {
     const existing = this.stocks.get(stockData.symbol);
     const stock: Stock = {
       id: existing?.id || this.currentStockId++,
+      ...existing, // Preserve existing data including float
       ...stockData,
       lastUpdated: new Date(),
     };

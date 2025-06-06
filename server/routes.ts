@@ -252,12 +252,15 @@ async function fetchTopGappers(): Promise<void> {
               minuteRelativeVolume = (baseRelative * variance).toFixed(0);
             }
 
+            // Get existing stock to preserve float data
+            const existingStock = await storage.getStock(ticker);
+            
             const stockData = {
               symbol: ticker,
               name: null, // Only store if we have authentic data
               price: currentPrice.toString(),
               volume: volume,
-              float: null, // Only store authentic float data when available
+              float: existingStock?.float || null, // Preserve existing float data
               gapPercentage: gapPercentage.toFixed(2),
               relativeVolume: (relativeVolumeRatio * 100).toFixed(2),
               relativeVolumeMin: minuteRelativeVolume ? parseFloat(minuteRelativeVolume).toFixed(2) : null,
