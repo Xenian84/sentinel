@@ -356,6 +356,12 @@ export default function StockScanner() {
         isOpen={!!selectedStock}
         onClose={() => setSelectedStock(null)}
       />
+
+      {/* News Room */}
+      <NewsRoom 
+        isOpen={isNewsRoomOpen}
+        onClose={() => setIsNewsRoomOpen(false)}
+      />
     </div>
   );
 }
