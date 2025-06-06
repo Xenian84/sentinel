@@ -162,10 +162,27 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
         <tbody className="bg-white divide-y divide-gray-200">
           {sortedStocks.map((stock) => {
             const gapPercent = parseFloat(stock.gapPercentage || '0');
-            const isPositive = gapPercent > 0;
+            const price = parseFloat(stock.price || '0');
+            const relativeVolume = parseFloat(stock.relativeVolume || '0');
+            const float = stock.float || 0;
+            const hasNews = stock.hasNews || false;
             
-            // Color-coded background like in the reference image
-            const getRowBgColor = (gap: number) => {
+            // Check proprietary scanning conditions
+            const conditions = {
+              volume5x: relativeVolume >= 500, // 5x = 500% relative volume
+              up10Percent: gapPercent >= 10,
+              hasNewsEvent: hasNews,
+              priceRange: price >= 1.00 && price <= 20.00,
+              lowFloat: float > 0 && float <= 10000000 // Less than 10M shares
+            };
+            
+            // Count how many conditions are met
+            const conditionsMet = Object.values(conditions).filter(Boolean).length;
+            const isHighPriority = conditionsMet >= 3; // 3 or more conditions met
+            
+            // Color-coded background with special highlighting for high-priority stocks
+            const getRowBgColor = (gap: number, priority: boolean) => {
+              if (priority) return 'bg-yellow-300 border-2 border-yellow-500'; // Golden highlight for high priority
               if (gap > 100) return 'bg-green-400';
               if (gap > 50) return 'bg-green-300';
               if (gap > 20) return 'bg-green-200';
@@ -175,7 +192,7 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
               return 'bg-gray-50';
             };
 
-            const rowBgColor = getRowBgColor(gapPercent);
+            const rowBgColor = getRowBgColor(gapPercent, isHighPriority);
 
             return (
               <tr 
@@ -198,6 +215,34 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                     >
                       {stock.symbol}
                     </a>
+                    {/* Proprietary scanning condition indicators */}
+                    <div className="flex flex-wrap gap-1">
+                      {conditions.volume5x && (
+                        <span className="bg-purple-500 text-white text-xs px-1 py-0.5 rounded font-bold" title="5x Relative Volume">
+                          Volume
+                        </span>
+                      )}
+                      {conditions.up10Percent && (
+                        <span className="bg-pink-500 text-white text-xs px-1 py-0.5 rounded font-bold" title="Already up 10% on the day">
+                          +10%
+                        </span>
+                      )}
+                      {conditions.hasNewsEvent && (
+                        <span className="bg-fuchsia-500 text-white text-xs px-1 py-0.5 rounded font-bold" title="News Event moving stock higher">
+                          News
+                        </span>
+                      )}
+                      {conditions.priceRange && (
+                        <span className="bg-red-500 text-white text-xs px-1 py-0.5 rounded font-bold" title="Price range $1.00 - $20.00">
+                          Price
+                        </span>
+                      )}
+                      {conditions.lowFloat && (
+                        <span className="bg-yellow-600 text-white text-xs px-1 py-0.5 rounded font-bold" title="Less than 10M shares available">
+                          Supply
+                        </span>
+                      )}
+                    </div>
                     {(stock.hasNews || stock.newsCount) && (
                       <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-red-500"></div>
                     )}

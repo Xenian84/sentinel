@@ -81,6 +81,28 @@ export default function StockScanner() {
     stock.gapPercentage && parseFloat(stock.gapPercentage) < 0
   ).length;
 
+  // Calculate proprietary scanning conditions for all stocks
+  const proprietaryConditions = stocks.map(stock => {
+    const gapPercent = parseFloat(stock.gapPercentage || '0');
+    const price = parseFloat(stock.price || '0');
+    const relativeVolume = parseFloat(stock.relativeVolume || '0');
+    const float = stock.float || 0;
+    const hasNews = stock.hasNews || false;
+    
+    return {
+      symbol: stock.symbol,
+      volume5x: relativeVolume >= 500,
+      up10Percent: gapPercent >= 10,
+      hasNewsEvent: hasNews,
+      priceRange: price >= 1.00 && price <= 20.00,
+      lowFloat: float > 0 && float <= 10000000
+    };
+  });
+
+  const highPriorityStocks = proprietaryConditions.filter(stock => 
+    Object.values(stock).filter(Boolean).length >= 4 // 3+ conditions (excluding symbol)
+  ).length;
+
   return (
     <div className="min-h-screen bg-financial-bg font-roboto">
       {/* Header */}
@@ -99,9 +121,14 @@ export default function StockScanner() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-300">
-                <span>Last Updated: </span>
-                <span>{lastUpdate}</span>
+              <div className="flex items-center space-x-6 text-sm text-gray-300">
+                <div>
+                  <span>Last Updated: </span>
+                  <span>{lastUpdate}</span>
+                </div>
+                <div className="bg-yellow-600 text-white px-3 py-1 rounded-lg font-bold">
+                  High Priority: {highPriorityStocks} stocks
+                </div>
               </div>
               <Button 
                 onClick={handleRefresh}
