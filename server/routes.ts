@@ -385,8 +385,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // 4) Demand: Most day traders prefer $1.00 - $20.00
             const criterion4 = price >= 1.00 && price <= 20.00; // Exact price range
             
-            // 5) Supply: Less than 10 million shares available to trade
-            const criterion5 = volume < 10000000; // Use volume as proxy for float
+            // 5) Supply: Less than 10 million shares available to trade (using real float data)
+            const floatShares = stock.float ? stock.float * 1000000 : null; // Convert from millions to actual shares
+            const criterion5 = floatShares ? floatShares < 10000000 : volume < 10000000; // Use real float if available, fallback to volume
             
             // Show stocks that meet at least 3 of 5 strict criteria (compromise for market reality)
             const metCriteria = [criterion1, criterion2, criterion3, criterion4, criterion5].filter(Boolean).length;

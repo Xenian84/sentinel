@@ -14,37 +14,65 @@ def get_float_data(ticker: str) -> Optional[float]:
         url = f'https://finance.yahoo.com/quote/{ticker}/key-statistics'
         
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
         
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
         html = response.text
 
-        # Extract the JSON data from the page
+        # Method 1: Extract JSON data from root.App.main
         pattern = r'root\.App\.main = (.*?);\n'
         match = re.search(pattern, html)
 
         if match:
             try:
                 data = json.loads(match.group(1))
-                quote_summary = data['context']['dispatcher']['stores']['QuoteSummaryStore']
+                quote_summary = data.get('context', {}).get('dispatcher', {}).get('stores', {}).get('QuoteSummaryStore', {})
                 
-                # Try to get float shares from defaultKeyStatistics
-                if 'defaultKeyStatistics' in quote_summary:
-                    float_shares = quote_summary['defaultKeyStatistics'].get('floatShares')
-                    if float_shares and 'raw' in float_shares:
-                        return float_shares['raw']
+                # Try multiple locations for float shares
+                locations = [
+                    'defaultKeyStatistics',
+                    'summaryDetail', 
+                    'price',
+                    'financialData'
+                ]
                 
-                # Fallback: try to get from summaryDetail
-                if 'summaryDetail' in quote_summary:
-                    float_shares = quote_summary['summaryDetail'].get('floatShares')
-                    if float_shares and 'raw' in float_shares:
-                        return float_shares['raw']
+                for location in locations:
+                    if location in quote_summary:
+                        section = quote_summary[location]
+                        if section and isinstance(section, dict):
+                            float_shares = section.get('floatShares')
+                            if float_shares and isinstance(float_shares, dict) and 'raw' in float_shares:
+                                return float_shares['raw']
                         
             except (json.JSONDecodeError, KeyError) as e:
-                print(f"Error parsing data for {ticker}: {e}", file=sys.stderr)
-                return None
+                print(f"JSON parsing error for {ticker}: {e}", file=sys.stderr)
+
+        # Method 2: Alternative JSON pattern
+        alt_pattern = r'"floatShares":\s*\{\s*"raw":\s*([0-9.]+)'
+        alt_match = re.search(alt_pattern, html)
+        if alt_match:
+            try:
+                return float(alt_match.group(1))
+            except ValueError:
+                pass
+
+        # Method 3: Search for float in text content
+        float_patterns = [
+            r'Float[^0-9]*([0-9,]+\.?[0-9]*)[^0-9]*[MBK]?',
+            r'Shares Outstanding[^0-9]*([0-9,]+\.?[0-9]*)[^0-9]*[MBK]?'
+        ]
+        
+        for pattern in float_patterns:
+            matches = re.findall(pattern, html, re.IGNORECASE)
+            if matches:
+                try:
+                    # Convert text number to float
+                    num_str = matches[0].replace(',', '')
+                    return float(num_str)
+                except ValueError:
+                    continue
         
         return None
         
