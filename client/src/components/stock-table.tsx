@@ -207,11 +207,15 @@ export default function StockTable({ stocks, isLoading, onShowNews }: StockTable
                 <td className="px-4 py-2 whitespace-nowrap">
                   <div className="flex items-center space-x-1">
                     <a 
-                      href={`https://www.webull.com/quote/us/share/${stock.symbol}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={`webull://stock/${stock.symbol}`}
+                      onClick={(e) => {
+                        // Fallback to web version if app protocol fails
+                        setTimeout(() => {
+                          window.open(`https://app.webull.com/stocks/${stock.symbol}`, '_blank');
+                        }, 500);
+                      }}
                       className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-sm transition-colors"
-                      title={`View ${stock.symbol} chart on Webull`}
+                      title={`Open ${stock.symbol} in Webull app (fallback to web)`}
                     >
                       {stock.symbol}
                     </a>
