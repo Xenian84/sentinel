@@ -314,6 +314,48 @@ async function fetchFloatData(tickers: string[]): Promise<Record<string, number 
   });
 }
 
+async function fetchShortData(tickers: string[]): Promise<Record<string, { shortInterest: number | null; shortRatio: number | null }>> {
+  return new Promise((resolve, reject) => {
+    if (tickers.length === 0) {
+      resolve({});
+      return;
+    }
+
+    const pythonProcess = spawn('python3', ['server/short_interest_scraper.py', ...tickers]);
+    
+    let stdout = '';
+    let stderr = '';
+    
+    pythonProcess.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+    
+    pythonProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+    
+    pythonProcess.on('close', (code) => {
+      if (code === 0) {
+        try {
+          const results = JSON.parse(stdout.trim());
+          resolve(results);
+        } catch (error) {
+          console.error('Error parsing short data:', error);
+          resolve({});
+        }
+      } else {
+        console.error('Short data scraper error:', stderr);
+        resolve({});
+      }
+    });
+    
+    pythonProcess.on('error', (error) => {
+      console.error('Failed to start short data scraper:', error);
+      resolve({});
+    });
+  });
+}
+
 async function fetchTopGappers(): Promise<void> {
   try {
     console.log('Fetching real-time market gainers and losers from Polygon API...');
@@ -460,24 +502,32 @@ async function fetchTopGappers(): Promise<void> {
     
     if (shouldFetchFloat) {
       try {
-        // Fetch float data for all stocks to ensure complete coverage
+        // Fetch comprehensive data for all stocks
         const symbols = sortedGappers.map(stock => stock.symbol);
         console.log(`Fetching float data for ${symbols.length} stocks...`);
         const floatData = await fetchFloatData(symbols);
         
-        // Update stocks with float data
+        // Fetch short interest data for top stocks
+        const topSymbols = symbols.slice(0, 10); // Limit to top 10 for API efficiency
+        console.log(`Fetching short interest data for ${topSymbols.length} top stocks...`);
+        const shortData = await fetchShortData(topSymbols);
+        
+        // Update stocks with comprehensive data
         const updatedGappers = sortedGappers.map(stock => ({
           ...stock,
-          float: floatData[stock.symbol] || stock.float || null // Keep existing float if fetch fails
+          float: floatData[stock.symbol] || stock.float || null,
+          shortInterest: shortData[stock.symbol]?.shortInterest || stock.shortInterest || null,
+          shortRatio: shortData[stock.symbol]?.shortRatio || stock.shortRatio || null
         }));
         
-        // Save updated stocks with float data
+        // Save updated stocks
         for (const stock of updatedGappers) {
           await storage.upsertStock(stock);
         }
         
         const validFloats = Object.values(floatData).filter(f => f !== null).length;
-        console.log(`Enhanced ${validFloats} stocks with Yahoo Finance float data`);
+        const validShorts = Object.values(shortData).filter(d => d.shortInterest !== null || d.shortRatio !== null).length;
+        console.log(`Enhanced ${validFloats} stocks with float data and ${validShorts} stocks with short interest data`);
         return updatedGappers;
       } catch (error) {
         console.error('Error fetching float data:', error);
