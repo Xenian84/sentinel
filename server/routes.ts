@@ -279,6 +279,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case 'negative':
           gappers = await storage.getNegativeGappers();
           break;
+        case 'moys':
+          // Apply Moys Top Gappers - 5 Indicators of High Demand and Low Supply
+          const allStocks = await storage.getTopGappers();
+          gappers = allStocks.filter(stock => {
+            const gapPercent = parseFloat(stock.gapPercentage || '0');
+            const price = parseFloat(stock.price || '0');
+            const relativeVolume = parseFloat(stock.relativeVolume || '0');
+            const volume = stock.volume || 0;
+            const hasNews = stock.hasNews;
+            
+            // 1) Demand: 5x Relative Volume (5x Above Average Volume today)
+            const demandVolume = relativeVolume >= 500; // 5x = 500%
+            
+            // 2) Demand: Already up 10% on the day
+            const demandGap = gapPercent >= 10;
+            
+            // 3) Demand: There is a News Event moving the stock higher
+            const demandNews = hasNews;
+            
+            // 4) Demand: Most day traders prefer $1.00 - $20.00
+            const demandPrice = price >= 1.00 && price <= 20.00;
+            
+            // 5) Supply: Use volume as proxy for liquidity (avoid very high volume indicating large float)
+            const lowSupply = volume < 50000000; // Less than 50M volume suggests smaller float
+            
+            // Must meet all 5 criteria for Moys Top Gappers
+            return demandVolume && demandGap && demandNews && demandPrice && lowSupply;
+          });
+          break;
         default:
           gappers = await storage.getTopGappers(limit ? parseInt(limit as string) : 50);
       }

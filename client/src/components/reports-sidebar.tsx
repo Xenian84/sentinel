@@ -33,8 +33,8 @@ export default function ReportsSidebar({ onReportSelect, currentReport }: Report
         {
           id: "moys-top-gappers",
           name: "Moys Top Gappers",
-          description: "Original top gapping stocks scanner with comprehensive market data",
-          endpoint: "/api/stocks/gappers",
+          description: "5 indicators of high demand and low supply",
+          endpoint: "/api/stocks/gappers?filter=moys",
           icon: TrendingUp,
           isActive: currentReport === "moys-top-gappers"
         },
