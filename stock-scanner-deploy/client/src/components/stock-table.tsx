@@ -1,0 +1,317 @@
+import { useState } from "react";
+import { ChevronUp, ChevronDown, AlertTriangle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface StockGapper {
+  id: number;
+  symbol: string;
+  name: string | null;
+  price: string | null;
+  volume: number | null;
+  float: number | null;
+  gapPercentage: string | null;
+  relativeVolume: string | null;
+  relativeVolumeMin: string | null;
+  hasNews: boolean;
+  lastUpdated: Date | null;
+  newsCount?: number;
+  shortInterest?: string | null;
+  shortRatio?: string | null;
+}
+
+interface StockTableProps {
+  stocks: StockGapper[];
+  isLoading: boolean;
+  onShowNews: (symbol: string) => void;
+}
+
+type SortColumn = 'gap' | 'symbol' | 'price' | 'volume' | 'float' | 'relativeVolume' | 'relativeVolumeMin';
+type SortDirection = 'asc' | 'desc';
+
+export default function StockTable({ stocks, isLoading, onShowNews }: StockTableProps) {
+  const [sortColumn, setSortColumn] = useState<SortColumn>('gap');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
+
+  const sortedStocks = [...stocks].sort((a, b) => {
+    let aValue: any;
+    let bValue: any;
+
+    switch (sortColumn) {
+      case 'gap':
+        aValue = parseFloat(a.gapPercentage || '0');
+        bValue = parseFloat(b.gapPercentage || '0');
+        break;
+      case 'symbol':
+        aValue = a.symbol;
+        bValue = b.symbol;
+        break;
+      case 'price':
+        aValue = parseFloat(a.price || '0');
+        bValue = parseFloat(b.price || '0');
+        break;
+      case 'volume':
+        aValue = a.volume || 0;
+        bValue = b.volume || 0;
+        break;
+      case 'float':
+        aValue = a.float || 0;
+        bValue = b.float || 0;
+        break;
+      case 'relativeVolume':
+        aValue = parseFloat(a.relativeVolume || '0');
+        bValue = parseFloat(b.relativeVolume || '0');
+        break;
+      case 'relativeVolumeMin':
+        aValue = parseFloat(a.relativeVolumeMin || '0');
+        bValue = parseFloat(b.relativeVolumeMin || '0');
+        break;
+      default:
+        aValue = 0;
+        bValue = 0;
+    }
+
+    if (typeof aValue === 'string') {
+      return sortDirection === 'asc' 
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
+    }
+
+    return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+  });
+
+  const formatVolume = (volume: number | null): string => {
+    if (!volume) return '-';
+    if (volume >= 1000000) {
+      return `${(volume / 1000000).toFixed(volume >= 100000000 ? 0 : 2)}M`;
+    } else if (volume >= 1000) {
+      return `${(volume / 1000).toFixed(volume >= 100000 ? 0 : 2)}K`;
+    }
+    return volume.toString();
+  };
+
+  const formatFloat = (floatValue: number | null): string => {
+    if (floatValue === null || floatValue === undefined || floatValue <= 0) return '-';
+    
+    // Yahoo Finance returns float in millions, so convert to display format
+    const floatInMillions = floatValue;
+    
+    if (floatInMillions >= 1000) {
+      return `${(floatInMillions / 1000).toFixed(1)}B`;
+    } else if (floatInMillions >= 1) {
+      return `${floatInMillions.toFixed(1)}M`;
+    } else if (floatInMillions >= 0.001) {
+      return `${(floatInMillions * 1000).toFixed(1)}K`;
+    }
+    return floatInMillions.toFixed(3);
+  };
+
+  const SortHeader = ({ column, children }: { column: SortColumn; children: React.ReactNode }) => (
+    <th 
+      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200 select-none"
+      onClick={() => handleSort(column)}
+    >
+      <div className="flex items-center space-x-1">
+        <span>{children}</span>
+        {sortColumn === column && (
+          sortDirection === 'asc' ? 
+            <ChevronUp className="w-4 h-4" /> : 
+            <ChevronDown className="w-4 h-4" />
+        )}
+      </div>
+    </th>
+  );
+
+  if (isLoading) {
+    return (
+      <div className="p-8 text-center">
+        <div className="inline-flex items-center">
+          <Loader2 className="w-6 h-6 animate-spin text-financial-primary mr-3" />
+          <span className="text-gray-600">Loading stock data...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (stocks.length === 0) {
+    return (
+      <div className="p-8 text-center">
+        <div className="text-gray-500">
+          <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+          <p className="text-lg font-medium">No gapping stocks found</p>
+          <p className="text-sm text-gray-600 mt-1">Try refreshing the data or check back during market hours</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full table-fixed">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-12">Change from Close(%)</th>
+            <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-20">Symbol / News</th>
+            <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-12">Price</th>
+            <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-16">Volume</th>
+            <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-12">Float</th>
+            <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-16">Relative Volume(Daily Rate)</th>
+            <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-16">Relative Volume(min %)</th>
+            <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-12">Gap(%)</th>
+            <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-16">Short Interest</th>
+            <th className="px-1 py-1 text-center text-xs font-semibold text-gray-700 bg-gray-100 w-12">Short Ratio</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {sortedStocks.map((stock) => {
+            const gapPercent = parseFloat(stock.gapPercentage || '0');
+            const price = parseFloat(stock.price || '0');
+            const relativeVolume = parseFloat(stock.relativeVolume || '0');
+            const float = stock.float || 0;
+            const hasNews = stock.hasNews || false;
+            
+            // Check proprietary scanning conditions
+            const conditions = {
+              volume5x: relativeVolume >= 500, // 5x = 500% relative volume
+              up10Percent: gapPercent >= 10,
+              hasNewsEvent: hasNews,
+              priceRange: price >= 1.00 && price <= 20.00,
+              lowFloat: float > 0 && float < 10 // Less than 10M shares (float stored in millions)
+            };
+            
+            // Count how many conditions are met
+            const conditionsMet = Object.values(conditions).filter(Boolean).length;
+            const isHighPriority = conditionsMet >= 3; // 3 or more conditions met
+            
+            // Color-coded background with special highlighting for high-priority stocks
+            const getRowBgColor = (gap: number, priority: boolean) => {
+              if (priority) return 'bg-yellow-300 border-2 border-yellow-500'; // Golden highlight for high priority
+              if (gap > 100) return 'bg-green-400';
+              if (gap > 50) return 'bg-green-300';
+              if (gap > 20) return 'bg-green-200';
+              if (gap > 0) return 'bg-green-100';
+              if (gap < -20) return 'bg-red-200';
+              if (gap < -10) return 'bg-red-100';
+              return 'bg-gray-50';
+            };
+
+            const rowBgColor = getRowBgColor(gapPercent, isHighPriority);
+
+            return (
+              <tr 
+                key={stock.id} 
+                className={`hover:opacity-80 transition-opacity ${rowBgColor}`}
+              >
+                <td className="px-1 py-1 text-center w-12">
+                  <span className={`font-bold text-xs ${
+                    gapPercent > 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {gapPercent.toFixed(2)}
+                  </span>
+                </td>
+                <td className="px-1 py-1 w-20">
+                  <div className="flex flex-col space-y-1">
+                    <div className="flex items-center gap-1">
+                      <a 
+                        href={`https://www.tradingview.com/chart/?symbol=${stock.symbol}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-xs transition-colors"
+                        title={`View ${stock.symbol} chart on TradingView`}
+                      >
+                        {stock.symbol}
+                      </a>
+                      {stock.hasNews && (
+                        <button
+                          onClick={() => onShowNews(stock.symbol)}
+                          className="bg-red-500 text-white text-xs px-1 py-0.5 rounded font-bold hover:bg-red-600 transition-colors"
+                          title={`Click to view news for ${stock.symbol}`}
+                        >
+                          NEWS
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Proprietary scanning condition indicators */}
+                    <div className="flex flex-wrap gap-1">
+                      {conditions.volume5x && (
+                        <span className="bg-purple-500 text-white text-xs px-1 py-0.5 rounded font-bold" title="5x Relative Volume">
+                          V
+                        </span>
+                      )}
+                      {conditions.up10Percent && (
+                        <span className="bg-pink-500 text-white text-xs px-1 py-0.5 rounded font-bold" title="Up 10% or more on the day">
+                          %
+                        </span>
+                      )}
+
+                      {conditions.priceRange && (
+                        <span className="bg-red-500 text-white text-xs px-1 py-0.5 rounded font-bold" title="Price range $1.00 - $20.00">
+                          P
+                        </span>
+                      )}
+                      {conditions.lowFloat && (
+                        <span className="bg-yellow-600 text-white text-xs px-1 py-0.5 rounded font-bold" title="Less than 10M shares available">
+                          S
+                        </span>
+                      )}
+                    </div>
+                    {(stock.hasNews || (stock.newsCount && stock.newsCount > 0)) && (
+                      <div className="flex items-center space-x-1">
+                        <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-red-500"></div>
+                        <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold animate-pulse">
+                          NEWS
+                        </span>
+                        {stock.newsCount && stock.newsCount > 0 && (
+                          <span className="bg-gray-600 text-white text-xs px-1 rounded ml-1">{stock.newsCount}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </td>
+                <td className="px-1 py-1 text-center font-mono text-black text-xs w-12">
+                  {stock.price ? parseFloat(stock.price).toFixed(2) : '-'}
+                </td>
+                <td className="px-1 py-1 text-center font-mono text-black text-xs w-16">
+                  {formatVolume(stock.volume)}
+                </td>
+                <td className="px-1 py-1 text-center font-mono w-12">
+                  <span className="text-cyan-500 font-bold text-xs">
+                    {formatFloat(stock.float)}
+                  </span>
+                </td>
+                <td className="px-1 py-1 text-center font-mono text-black text-xs w-16">
+                  {stock.relativeVolume ? `${parseFloat(stock.relativeVolume).toFixed(2)}` : '-'}
+                </td>
+                <td className="px-1 py-1 text-center font-mono text-black text-xs w-16">
+                  {stock.relativeVolumeMin ? `${parseFloat(stock.relativeVolumeMin).toFixed(0)}%` : '-'}
+                </td>
+                <td className="px-1 py-1 text-center font-mono w-12">
+                  <span className={`font-bold text-xs ${
+                    gapPercent > 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {gapPercent.toFixed(1)}
+                  </span>
+                </td>
+                <td className="px-1 py-1 text-center font-mono text-black text-xs w-16">
+                  {stock.shortInterest ? `${parseFloat(stock.shortInterest).toFixed(1)}%` : '-'}
+                </td>
+                <td className="px-1 py-1 text-center font-mono text-black text-xs w-12">
+                  {stock.shortRatio ? parseFloat(stock.shortRatio).toFixed(2) : '-'}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
