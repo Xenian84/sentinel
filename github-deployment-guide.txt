@@ -1,0 +1,70 @@
+STOCK SCANNER - GITHUB DEPLOYMENT GUIDE
+=======================================
+
+Repository: https://github.com/Xenian84/sentinel
+
+STEP 1: INITIALIZE GIT REPOSITORY
+----------------------------------
+git init
+git remote add origin https://github.com/Xenian84/sentinel.git
+
+STEP 2: ADD ALL PROJECT FILES
+------------------------------
+git add .
+git commit -m "Initial commit: Complete Stock Scanner with Polygon.io API integration
+
+Features:
+- Real-time stock gap scanner with Polygon.io API
+- Authentic float data scraping with yfinance
+- Short interest data collection
+- News aggregation system with stock-specific filtering
+- 16 specialized trading reports
+- WebSocket real-time updates
+- Complete deployment package for production
+- SSL-ready Nginx configuration
+- Systemd service management
+- Enterprise-grade security and monitoring"
+
+STEP 3: PUSH TO GITHUB
+-----------------------
+git branch -M main
+git push -u origin main
+
+DEPLOYMENT FILES INCLUDED:
+--------------------------
+✓ complete-deploy.sh - Automated server deployment
+✓ deployment-commands.txt - Manual deployment steps
+✓ stock-scanner-complete.tar.gz - Complete application package
+✓ COMPLETE-DEPLOYMENT-PACKAGE.txt - Full deployment guide
+
+APPLICATION FEATURES:
+---------------------
+✓ Real-time data from Polygon.io API
+✓ 5 stocks currently tracked: KLTO (+170%), KNW (+123%), ELEV (+38%), ELAB (+28%), SVRE (+25%)
+✓ Authentic float data (19.87M, 6.69M, 43.51M, 1.26M, 739.77M shares)
+✓ Short interest percentages (10.25%, 6.58%, 9.14%, 6.49%, 12.07%)
+✓ Volume analysis and relative volume calculations
+✓ News aggregation with stock-specific filtering
+✓ WebSocket live updates
+✓ Professional UI with dark/light theme
+
+PRODUCTION DEPLOYMENT:
+----------------------
+1. Download stock-scanner-complete.tar.gz from repository
+2. Upload to your server
+3. Run: tar -xzf stock-scanner-complete.tar.gz
+4. Execute: cd stock-scanner-deploy && sudo ./deploy.sh
+5. Enter domain name and Polygon.io API key
+6. Application available at https://yourdomain.com
+
+GITHUB REPOSITORY STRUCTURE:
+----------------------------
+/
+├── server/                 # Backend API and data processing
+├── client/src/            # React frontend application
+├── shared/                # Shared schemas and types
+├── deployment/            # Production deployment files
+├── README.md             # Project documentation
+└── package.json          # Dependencies and scripts
+
+Your stock scanner is ready for production deployment with enterprise-grade features and complete GitHub version control.
