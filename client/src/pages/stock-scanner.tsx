@@ -12,7 +12,17 @@ import { Button } from "@/components/ui/button";
 
 interface MarketStatus {
   isOpen: boolean;
+  isExtendedHours: boolean;
+  tradingSession: 'regular' | 'pre-market' | 'after-hours' | 'closed';
   timestamp: string;
+  easternTime: string;
+  nextOpen?: string;
+  nextClose?: string;
+  sessions: {
+    preMarket: string;
+    regular: string;
+    afterHours: string;
+  };
 }
 
 interface StockGapper {
@@ -249,11 +259,22 @@ export default function StockScanner() {
               <h1 className="text-2xl font-bold">The Obvious Stocks</h1>
               <div className="flex items-center space-x-2 text-sm text-gray-300">
                 <span className={`inline-block w-2 h-2 rounded-full ${
-                  marketStatus?.isOpen ? 'bg-financial-success animate-pulse' : 'bg-gray-500'
+                  marketStatus?.tradingSession === 'regular' ? 'bg-green-500 animate-pulse' :
+                  marketStatus?.tradingSession === 'pre-market' ? 'bg-blue-500 animate-pulse' :
+                  marketStatus?.tradingSession === 'after-hours' ? 'bg-orange-500 animate-pulse' :
+                  'bg-gray-500'
                 }`}></span>
-                <span>
-                  {marketStatus?.isOpen ? 'Market Open' : 'Market Closed'}
+                <span className="font-semibold">
+                  {marketStatus?.tradingSession === 'regular' ? 'MARKET OPEN' :
+                   marketStatus?.tradingSession === 'pre-market' ? 'PRE-MARKET' :
+                   marketStatus?.tradingSession === 'after-hours' ? 'AFTER-HOURS' :
+                   'MARKET CLOSED'}
                 </span>
+                {marketStatus?.isExtendedHours && (
+                  <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">
+                    Extended Hours
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-4">
