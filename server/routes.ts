@@ -384,12 +384,15 @@ async function fetchTopGappers(): Promise<void> {
       const batch = allStocks.slice(i, i + batchSize);
       
       for (const stock of batch) {
-        const { ticker, todaysChangePerc, day, prevDay } = stock;
+        const { ticker, todaysChangePerc, day, prevDay, min } = stock;
         
-        if (day && prevDay && day.v > 50000) { // Minimum volume requirement
-          const currentPrice = day.c;
+        // Use minute data for current volume if day volume is 0
+        const currentVolume = day?.v || min?.v || 0;
+        const currentPrice = day?.c || min?.c || 0;
+        
+        if (prevDay && currentVolume > 50000 && currentPrice > 0) { // Minimum volume requirement
           const previousClose = prevDay.c;
-          const volume = day.v;
+          const volume = currentVolume;
           
           // Use the today's change percentage directly from Polygon
           const gapPercentage = todaysChangePerc;
