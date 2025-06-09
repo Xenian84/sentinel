@@ -123,6 +123,49 @@ export default function ControlsSection({
         </CardContent>
       </Card>
 
+      {/* Market Status with Extended Hours */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Market Status</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Trading Session</span>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white ${
+              marketStatus?.tradingSession ? getSessionColor(marketStatus.tradingSession) : 'bg-gray-500'
+            }`}>
+              <span className="w-2 h-2 bg-white rounded-full mr-1"></span>
+              {marketStatus?.tradingSession ? getSessionLabel(marketStatus.tradingSession) : 'Unknown'}
+            </span>
+          </div>
+          
+          {marketStatus?.isExtendedHours && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Extended Hours</span>
+              <span className="text-sm font-semibold text-blue-600">Active</span>
+            </div>
+          )}
+          
+          <div className="text-xs text-gray-500 space-y-1">
+            <div>Pre-Market: {marketStatus?.sessions?.preMarket || '4:00 AM - 9:30 AM ET'}</div>
+            <div>Regular: {marketStatus?.sessions?.regular || '9:30 AM - 4:00 PM ET'}</div>
+            <div>After-Hours: {marketStatus?.sessions?.afterHours || '4:00 PM - 8:00 PM ET'}</div>
+          </div>
+
+          {marketStatus?.tradingSession === 'pre-market' && (
+            <div className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+              Lower gap threshold active (2%+) for pre-market data
+            </div>
+          )}
+          
+          {marketStatus?.tradingSession === 'after-hours' && (
+            <div className="text-xs bg-orange-50 text-orange-700 px-2 py-1 rounded">
+              Lower gap threshold active (2%+) for after-hours data
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Statistics */}
       <Card>
         <CardHeader>
