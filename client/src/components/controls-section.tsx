@@ -22,6 +22,21 @@ interface APIStatus {
   lastRequest: string;
 }
 
+interface MarketStatus {
+  isOpen: boolean;
+  isExtendedHours: boolean;
+  tradingSession: 'regular' | 'pre-market' | 'after-hours' | 'closed';
+  timestamp: string;
+  easternTime: string;
+  nextOpen?: string;
+  nextClose?: string;
+  sessions: {
+    preMarket: string;
+    regular: string;
+    afterHours: string;
+  };
+}
+
 export default function ControlsSection({
   isConnected,
   totalGappers,
@@ -34,8 +49,31 @@ export default function ControlsSection({
     refetchInterval: 30000, // Check every 30 seconds
   });
 
+  const { data: marketStatus } = useQuery<MarketStatus>({
+    queryKey: ["/api/market/status"],
+    refetchInterval: 30000, // Check market status every 30 seconds
+  });
+
+  const getSessionColor = (session: string) => {
+    switch (session) {
+      case 'regular': return 'bg-green-500';
+      case 'pre-market': return 'bg-blue-500';
+      case 'after-hours': return 'bg-orange-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getSessionLabel = (session: string) => {
+    switch (session) {
+      case 'regular': return 'Regular Hours';
+      case 'pre-market': return 'Pre-Market';
+      case 'after-hours': return 'After Hours';
+      default: return 'Market Closed';
+    }
+  };
+
   return (
-    <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-6">
       {/* Real-time Connection Status */}
       <Card>
         <CardHeader>

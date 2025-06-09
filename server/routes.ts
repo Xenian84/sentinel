@@ -67,11 +67,63 @@ function isMarketOpen(): boolean {
   // Market is closed on weekends
   if (day === 0 || day === 6) return false;
   
-  // Market hours: 9:30 AM to 4:00 PM Eastern
+  // Regular market hours: 9:30 AM to 4:00 PM Eastern
   const marketOpen = 9 * 60 + 30; // 9:30 AM
   const marketClose = 16 * 60; // 4:00 PM
   
   return currentMinutes >= marketOpen && currentMinutes < marketClose;
+}
+
+function isExtendedTradingHours(): boolean {
+  const now = new Date();
+  const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+  const day = easternTime.getDay();
+  const hours = easternTime.getHours();
+  const minutes = easternTime.getMinutes();
+  const currentMinutes = hours * 60 + minutes;
+  
+  // No extended hours on weekends
+  if (day === 0 || day === 6) return false;
+  
+  // Pre-market: 4:00 AM to 9:30 AM Eastern
+  const preMarketStart = 4 * 60; // 4:00 AM
+  const preMarketEnd = 9 * 60 + 30; // 9:30 AM
+  
+  // After-hours: 4:00 PM to 8:00 PM Eastern
+  const afterHoursStart = 16 * 60; // 4:00 PM
+  const afterHoursEnd = 20 * 60; // 8:00 PM
+  
+  return (currentMinutes >= preMarketStart && currentMinutes < preMarketEnd) ||
+         (currentMinutes >= afterHoursStart && currentMinutes < afterHoursEnd);
+}
+
+function getTradingSession(): 'regular' | 'pre-market' | 'after-hours' | 'closed' {
+  const now = new Date();
+  const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+  const day = easternTime.getDay();
+  const hours = easternTime.getHours();
+  const minutes = easternTime.getMinutes();
+  const currentMinutes = hours * 60 + minutes;
+  
+  // Market is closed on weekends
+  if (day === 0 || day === 6) return 'closed';
+  
+  // Pre-market: 4:00 AM to 9:30 AM Eastern
+  if (currentMinutes >= 4 * 60 && currentMinutes < 9 * 60 + 30) {
+    return 'pre-market';
+  }
+  
+  // Regular market: 9:30 AM to 4:00 PM Eastern
+  if (currentMinutes >= 9 * 60 + 30 && currentMinutes < 16 * 60) {
+    return 'regular';
+  }
+  
+  // After-hours: 4:00 PM to 8:00 PM Eastern
+  if (currentMinutes >= 16 * 60 && currentMinutes < 20 * 60) {
+    return 'after-hours';
+  }
+  
+  return 'closed';
 }
 
 // Rate limit tracking
@@ -358,9 +410,11 @@ async function fetchShortData(tickers: string[]): Promise<Record<string, { short
 
 async function fetchTopGappers(): Promise<void> {
   try {
-    console.log('Fetching real-time market gainers and losers from Polygon API...');
+    const tradingSession = getTradingSession();
+    console.log(`Fetching real-time market data during ${tradingSession} session from Polygon API...`);
     
     // Fetch both gainers and losers to get comprehensive gap data
+    // Include extended hours data for pre-market and after-hours sessions
     const [gainersData, losersData] = await Promise.all([
       fetchFromPolygon(`/v2/snapshot/locale/us/markets/stocks/gainers?include_otc=false`),
       fetchFromPolygon(`/v2/snapshot/locale/us/markets/stocks/losers?include_otc=false`)
@@ -397,8 +451,16 @@ async function fetchTopGappers(): Promise<void> {
           // Use the today's change percentage directly from Polygon
           const gapPercentage = todaysChangePerc;
           
-          // Only include stocks with significant gaps (>3% change)
-          if (Math.abs(gapPercentage) > 3) {
+          // Adjust minimum gap threshold based on trading session
+          const currentSession = getTradingSession();
+          let minGapThreshold = 3; // Default 3% for regular hours
+          
+          if (currentSession === 'pre-market' || currentSession === 'after-hours') {
+            minGapThreshold = 2; // Lower threshold for extended hours to capture more movement
+          }
+          
+          // Only include stocks with significant gaps
+          if (Math.abs(gapPercentage) > minGapThreshold) {
             const relativeVolumeRatio = prevDay.v ? (volume / prevDay.v) : 1;
             
             // Check for real news using Polygon API
@@ -746,13 +808,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get market status
+  // Get market status with extended trading hours
   app.get("/api/market/status", async (req, res) => {
     try {
       const isOpen = isMarketOpen();
+      const isExtended = isExtendedTradingHours();
+      const tradingSession = getTradingSession();
+      
+      const now = new Date();
+      const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+      
+      // Calculate next market open/close times
+      let nextOpen = null;
+      let nextClose = null;
+      
+      if (tradingSession === 'closed') {
+        // Calculate next market open
+        const nextDay = new Date(easternTime);
+        nextDay.setDate(nextDay.getDate() + 1);
+        nextDay.setHours(4, 0, 0, 0); // 4:00 AM ET pre-market
+        
+        // Skip weekends
+        while (nextDay.getDay() === 0 || nextDay.getDay() === 6) {
+          nextDay.setDate(nextDay.getDate() + 1);
+        }
+        
+        nextOpen = nextDay.toISOString();
+      } else if (tradingSession === 'pre-market') {
+        nextOpen = new Date(easternTime.setHours(9, 30, 0, 0)).toISOString();
+        nextClose = new Date(easternTime.setHours(20, 0, 0, 0)).toISOString();
+      } else if (tradingSession === 'regular') {
+        nextClose = new Date(easternTime.setHours(16, 0, 0, 0)).toISOString();
+      } else if (tradingSession === 'after-hours') {
+        nextClose = new Date(easternTime.setHours(20, 0, 0, 0)).toISOString();
+      }
+      
       res.json({
         isOpen,
-        timestamp: new Date().toISOString()
+        isExtendedHours: isExtended,
+        tradingSession,
+        timestamp: new Date().toISOString(),
+        easternTime: easternTime.toISOString(),
+        nextOpen,
+        nextClose,
+        sessions: {
+          preMarket: "4:00 AM - 9:30 AM ET",
+          regular: "9:30 AM - 4:00 PM ET",
+          afterHours: "4:00 PM - 8:00 PM ET"
+        }
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to get market status" });
