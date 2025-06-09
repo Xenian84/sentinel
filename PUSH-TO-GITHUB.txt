@@ -11,18 +11,18 @@ git remote add origin https://github.com/Xenian84/sentinel.git
 git add .
 
 # 3. Create comprehensive commit
-git commit -m "Complete Stock Scanner Application with Real-Time Data
+git commit -m "Enhanced Stock Scanner with Extended Trading Hours Coverage
 
-- Real-time gap detection with Polygon.io API integration
-- Currently tracking 5 stocks: KLTO (+170%), KNW (+123%), ELEV (+38%), ELAB (+28%), SVRE (+25%)
-- Authentic float data: 19.87M, 6.69M, 43.51M, 1.26M, 739.77M shares
-- Short interest tracking: 10.25%, 6.58%, 9.14%, 6.49%, 12.07%
-- Volume analysis with relative volume calculations
-- News aggregation with stock-specific filtering
-- WebSocket real-time updates
-- Complete production deployment package
-- SSL-ready server configuration
-- Enterprise-grade security and monitoring
+- Extended trading hours: Pre-market (4 AM-9:30 AM) + After-hours (4 PM-8 PM ET)
+- Dynamic market status indicators: OPEN/PRE-MARKET/AFTER-HOURS/CLOSED
+- Currently tracking 31 stocks with massive movements: KLTO (+836%), KLTOW (+832%), OMH (+197%)
+- Lower gap thresholds (2%) for extended hours vs 3% regular hours
+- Real-time session detection with color-coded status badges
+- Single clean status indicator (removed duplicate indicators)
+- Comprehensive 16-hour market coverage vs previous 6.5 hours
+- Authentic float and short interest data integration
+- WebSocket real-time updates with session-aware data collection
+- Complete production deployment package with GitHub integration
 
 Features:
 ✓ React/TypeScript frontend with professional UI
